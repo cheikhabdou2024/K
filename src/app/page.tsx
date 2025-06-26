@@ -37,14 +37,14 @@ export default function Home() {
       <Carousel 
         setApi={setApi} 
         className="w-full h-full"
-        orientation="vertical"
+        orientation="horizontal"
         opts={{
           loop: true,
         }}
       >
-        <CarouselContent className="h-full -mt-0">
+        <CarouselContent className="h-full ml-0">
           {mockFeedItems.map((item, index) => (
-            <CarouselItem key={item.id} className="pt-0">
+            <CarouselItem key={item.id} className="p-0">
               <VideoCard item={item} isActive={index === current}/>
             </CarouselItem>
           ))}
