@@ -91,7 +91,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   };
   
   return (
-    <div className="w-full h-full relative bg-black flex items-center justify-center" onClick={togglePlay}>
+    <div className="w-full h-full relative bg-black" onClick={togglePlay}>
       <video
         ref={videoRef}
         src={item.videoUrl}
@@ -103,7 +103,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         data-ai-hint="short form video"
       />
       {!isPlaying && (
-          <Play className="h-20 w-20 text-white/70 absolute pointer-events-none" fill="white" />
+          <Play className="h-20 w-20 text-white/70 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" fill="white" />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
       <VideoInfo item={item} />
