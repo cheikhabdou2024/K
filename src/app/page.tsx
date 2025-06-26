@@ -12,14 +12,40 @@ import { mockFeedItems } from '@/lib/mock-data';
 
 export default function Home() {
   const [api, setApi] = React.useState<CarouselApi>();
+  const [current, setCurrent] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!api) {
+      return;
+    }
+
+    setCurrent(api.selectedScrollSnap());
+    
+    const handleSelect = () => {
+      setCurrent(api.selectedScrollSnap());
+    };
+
+    api.on('select', handleSelect);
+
+    return () => {
+      api.off('select', handleSelect);
+    };
+  }, [api]);
 
   return (
     <div className="h-full w-full bg-black">
-      <Carousel setApi={setApi} className="w-full h-full">
-        <CarouselContent>
+      <Carousel 
+        setApi={setApi} 
+        className="w-full h-full"
+        orientation="vertical"
+        opts={{
+          loop: true,
+        }}
+      >
+        <CarouselContent className="h-full -mt-0">
           {mockFeedItems.map((item, index) => (
-            <CarouselItem key={index}>
-              <VideoCard item={item} />
+            <CarouselItem key={item.id} className="pt-0">
+              <VideoCard item={item} isActive={index === current}/>
             </CarouselItem>
           ))}
         </CarouselContent>

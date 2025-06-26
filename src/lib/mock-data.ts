@@ -14,6 +14,7 @@ export interface FeedItem {
   id: string;
   user: User;
   videoUrl: string;
+  thumbnailUrl: string;
   caption: string;
   sound: Sound;
   likes: number;
@@ -22,7 +23,7 @@ export interface FeedItem {
 }
 
 export interface Comment {
-  id: string;
+  id:string;
   user: User;
   text: string;
   timestamp: string;
@@ -65,7 +66,8 @@ export const mockFeedItems: FeedItem[] = [
   {
     id: '1',
     user: users[1],
-    videoUrl: 'https://placehold.co/405x720.png',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+    thumbnailUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg',
     caption: 'Amazing sunset views from my trip! #travel #sunset',
     sound: { id: 'sound-1', title: 'Original Sound - johnsmith' },
     likes: 12345,
@@ -75,7 +77,8 @@ export const mockFeedItems: FeedItem[] = [
   {
     id: '2',
     user: users[2],
-    videoUrl: 'https://placehold.co/405x720.png',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    thumbnailUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg',
     caption: 'Trying out the new dance challenge! Did I nail it? 🕺 #dancechallenge',
     sound: { id: 'sound-2', title: 'Viral Hits - Trending Sounds' },
     likes: 234567,
@@ -85,7 +88,8 @@ export const mockFeedItems: FeedItem[] = [
   {
     id: '3',
     user: users[3],
-    videoUrl: 'https://placehold.co/405x720.png',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    thumbnailUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg',
     caption: 'My daily skincare routine. ✨ #skincare #beautyhacks',
     sound: { id: 'sound-3', title: 'Lo-fi Chill - AestheticVibes' },
     likes: 89012,
@@ -95,7 +99,8 @@ export const mockFeedItems: FeedItem[] = [
   {
     id: '4',
     user: users[0],
-    videoUrl: 'https://placehold.co/405x720.png',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+    thumbnailUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerJoyrides.jpg',
     caption: 'Cooking up a storm in the kitchen! 🍝 #recipe #foodtok',
     sound: { id: 'sound-4', title: 'Italian Dinner Music - ChefSounds' },
     likes: 54321,

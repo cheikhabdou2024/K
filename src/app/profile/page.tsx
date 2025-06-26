@@ -49,7 +49,7 @@ const ProfileContent = () => (
       <div className="grid grid-cols-3 gap-1">
         {mockFeedItems.map((item) => (
           <div key={item.id} className="relative aspect-square">
-            <Image src={item.videoUrl} alt="video thumbnail" fill className="object-cover" data-ai-hint="video thumbnail" />
+            <Image src={item.thumbnailUrl} alt="video thumbnail" fill className="object-cover" data-ai-hint="video thumbnail" />
           </div>
         ))}
       </div>

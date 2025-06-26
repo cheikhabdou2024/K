@@ -1,16 +1,19 @@
-import Image from 'next/image';
+'use client';
+
 import type { FeedItem } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
-import { Heart, MessageCircle, Send, Music } from 'lucide-react';
+import { Heart, MessageCircle, Send, Music, Play } from 'lucide-react';
 import { CommentSheet } from './comment-sheet';
+import { useRef, useEffect, useState } from 'react';
 
 interface VideoCardProps {
   item: FeedItem;
+  isActive: boolean;
 }
 
 const VideoActions = ({ item }: { item: FeedItem }) => (
-  <div className="absolute bottom-20 right-2 flex flex-col gap-4">
+  <div className="absolute bottom-20 right-2 flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
     <Button
       variant="ghost"
       size="icon"
@@ -41,7 +44,7 @@ const VideoActions = ({ item }: { item: FeedItem }) => (
 );
 
 const VideoInfo = ({ item }: { item: FeedItem }) => (
-  <div className="absolute bottom-4 left-4 right-4 text-white">
+  <div className="absolute bottom-4 left-4 right-4 text-white" onClick={(e) => e.stopPropagation()}>
     <div className="flex items-center gap-2">
       <Avatar className="w-10 h-10 border-2 border-white">
         <AvatarImage src={item.user.avatarUrl} />
@@ -58,19 +61,51 @@ const VideoInfo = ({ item }: { item: FeedItem }) => (
   </div>
 );
 
-export function VideoCard({ item }: VideoCardProps) {
+export function VideoCard({ item, isActive }: VideoCardProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      if (isActive) {
+        videoRef.current.play().catch(error => console.error("Video play failed:", error));
+        setIsPlaying(true);
+      } else {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+        setIsPlaying(false);
+      }
+    }
+  }, [isActive]);
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+        setIsPlaying(true);
+      } else {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
+  };
+  
   return (
-    <div className="w-full h-full relative bg-black flex items-center justify-center">
-      <Image
+    <div className="w-full h-full relative bg-black flex items-center justify-center" onClick={togglePlay}>
+      <video
+        ref={videoRef}
         src={item.videoUrl}
-        alt={item.caption}
-        layout="fill"
-        objectFit="cover"
-        className="opacity-90"
+        loop
+        muted
+        playsInline
+        className="w-full h-full object-cover"
+        poster={item.thumbnailUrl}
         data-ai-hint="short form video"
-        priority
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+      {!isPlaying && (
+          <Play className="h-20 w-20 text-white/70 absolute pointer-events-none" fill="white" />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
       <VideoInfo item={item} />
       <VideoActions item={item} />
     </div>

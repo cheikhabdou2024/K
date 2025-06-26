@@ -19,7 +19,7 @@ export default function SearchPage() {
             <Card key={item.id} className="overflow-hidden group relative">
               <CardContent className="p-0">
                 <div className="aspect-video relative">
-                  <Image src={item.videoUrl} alt={item.caption} fill className="object-cover" data-ai-hint="video thumbnail"/>
+                  <Image src={item.thumbnailUrl} alt={item.caption} fill className="object-cover" data-ai-hint="video thumbnail"/>
                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <PlayCircle className="h-10 w-10 text-white" />
                   </div>
