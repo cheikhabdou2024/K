@@ -39,11 +39,17 @@ export async function aiContentScan(input: AiContentScanInput): Promise<AiConten
   return aiContentScanFlow(input);
 }
 
-const aiContentScanPrompt = ai.definePrompt({
-  name: 'aiContentScanPrompt',
-  input: {schema: AiContentScanInputSchema},
-  output: {schema: AiContentScanOutputSchema},
-  prompt: `You are an AI content moderation tool. Your task is to determine if the given content is safe for all users.
+const safetyConfig = {
+  safetySettings: [
+    {category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH'},
+    {category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE'},
+    {category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE'},
+    {category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE'},
+    {category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_ONLY_HIGH'},
+  ],
+};
+
+const basePrompt = `You are an AI content moderation tool. Your task is to determine if the given content is safe for all users.
 
   Here are the content guidelines:
   - No adult content or sexually explicit material.
@@ -52,33 +58,26 @@ const aiContentScanPrompt = ai.definePrompt({
   - No misinformation or false/misleading information.
   - No content promoting dangerous or harmful activities.
 
-  Content Type: {{{contentType}}}
-  Content: {{#ifEquals contentType "text"}}{{{content}}}{{else}}{{media url=content}}{{/ifEquals}}
-
   Based on these guidelines, please analyze the content and determine if it is safe.
   If the content violates any of the guidelines, set isSafe to false and provide a reason. Otherwise, set isSafe to true.
-  {
-    "isSafe": true/false,
-    "reason": "reason if isSafe is false, otherwise omit",
-    "categoryScores": { /* Category scores if available, otherwise omit */ }
-  }
+`;
 
-  Consider the following safety settings:
-  - HARM_CATEGORY_HATE_SPEECH: BLOCK_ONLY_HIGH
-  - HARM_CATEGORY_SEXUALLY_EXPLICIT: BLOCK_LOW_AND_ABOVE
-  - HARM_CATEGORY_HARASSMENT: BLOCK_MEDIUM_AND_ABOVE
-  - HARM_CATEGORY_DANGEROUS_CONTENT: BLOCK_NONE
-  - HARM_CATEGORY_CIVIC_INTEGRITY: BLOCK_ONLY_HIGH`,
-  config: {
-    safetySettings: [
-      {category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH'},
-      {category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE'},
-      {category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE'},
-      {category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE'},
-      {category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_ONLY_HIGH'},
-    ],
-  },
+const aiTextScanPrompt = ai.definePrompt({
+  name: 'aiTextScanPrompt',
+  input: {schema: z.object({content: z.string()})},
+  output: {schema: AiContentScanOutputSchema},
+  prompt: `${basePrompt}\n\nAnalyze the following text content: {{{content}}}`,
+  config: safetyConfig,
 });
+
+const aiMediaScanPrompt = ai.definePrompt({
+  name: 'aiMediaScanPrompt',
+  input: {schema: z.object({content: z.string()})},
+  output: {schema: AiContentScanOutputSchema},
+  prompt: `${basePrompt}\n\nAnalyze the following media content: {{media url=content}}`,
+  config: safetyConfig,
+});
+
 
 const aiContentScanFlow = ai.defineFlow(
   {
@@ -87,18 +86,12 @@ const aiContentScanFlow = ai.defineFlow(
     outputSchema: AiContentScanOutputSchema,
   },
   async input => {
-    const {output} = await aiContentScanPrompt(input);
-    return output!;
+    if (input.contentType === 'text') {
+      const {output} = await aiTextScanPrompt({ content: input.content });
+      return output!;
+    } else {
+      const {output} = await aiMediaScanPrompt({ content: input.content });
+      return output!;
+    }
   }
 );
-
-// Handlebars equality helper function
-Handlebars.registerHelper('ifEquals', function(arg1, arg2, options) {
-  return (arg1 == arg2) ? options.fn(this) : options.inverse(this);
-});
-
-// Declare Handlebars type to avoid typescript errors
-declare global {
-  var Handlebars: any;
-}
-
