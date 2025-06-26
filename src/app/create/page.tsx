@@ -150,7 +150,7 @@ export default function CreatePage() {
   }
 
   return (
-    <div className="container mx-auto max-w-2xl py-8 px-4">
+    <div className="container mx-auto max-w-2xl py-8 px-4 pb-20">
       <header className="mb-8">
         <h1 className="text-4xl font-headline font-bold text-primary">Create a New Post</h1>
         <p className="text-muted-foreground mt-2">

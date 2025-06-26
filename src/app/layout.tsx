@@ -24,7 +24,7 @@ export default function RootLayout({
       </head>
       <body className={cn('font-body antialiased', 'bg-background text-foreground')}>
         <div className="relative flex flex-col h-[100dvh] overflow-hidden">
-          <main className="flex-1 pb-16 h-full">{children}</main>
+          <main className="flex-1 h-full">{children}</main>
           <BottomNav />
         </div>
         <Toaster />

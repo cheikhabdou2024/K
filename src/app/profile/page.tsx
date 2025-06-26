@@ -64,7 +64,7 @@ const ProfileContent = () => (
 
 export default function ProfilePage() {
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto pb-16">
       <ProfileHeader />
       <ProfileContent />
     </div>
