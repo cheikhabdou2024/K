@@ -162,7 +162,7 @@ export default function CreatePage() {
           <FormItem>
             <FormLabel className="text-lg font-semibold font-headline">Video</FormLabel>
             <FormControl>
-              <>
+              <div>
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -202,7 +202,7 @@ export default function CreatePage() {
                     </Button>
                   </div>
                 )}
-              </>
+              </div>
             </FormControl>
           </FormItem>
 
