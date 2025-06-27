@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockUser, mockFeedItems } from '@/lib/mock-data';
 import { User, Video, Settings, Edit, Share2 } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const ProfileHeader = () => (
     <div className="relative p-4 md:p-6">
@@ -39,9 +40,11 @@ const ProfileHeader = () => (
       </div>
       <p className="text-center max-w-md text-sm">{mockUser.bio}</p>
       <div className="flex gap-2 w-full max-w-sm">
-         <Button className="font-bold flex-1">
-          <Edit className="mr-2 h-4 w-4" />
-          Edit Profile
+         <Button className="font-bold flex-1" asChild>
+          <Link href="/profile/edit">
+            <Edit className="mr-2 h-4 w-4" />
+            Edit Profile
+          </Link>
         </Button>
         <Button variant="outline" className="font-bold flex-1">
            <Share2 className="mr-2 h-4 w-4" />
