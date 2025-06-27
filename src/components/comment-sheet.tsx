@@ -89,12 +89,19 @@ export function CommentSheet({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      
+      const supportedMimeTypes = [
+        'audio/mp4', // Preferred, supported by Gemini
+        'audio/webm', // Fallback
+      ];
+      const mimeType = supportedMimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || 'audio/webm';
+
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
       };
       mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         const audioUrl = URL.createObjectURL(audioBlob);
         setAudioURL(audioUrl);
         audioChunksRef.current = [];
