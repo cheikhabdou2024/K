@@ -16,6 +16,14 @@ interface VideoCardProps {
 const VideoActions = ({ item }: { item: FeedItem }) => {
   const [isLiked, setIsLiked] = useState(item.isLiked || false);
   const [likeCount, setLikeCount] = useState(item.likes);
+  const [formattedLikeCount, setFormattedLikeCount] = useState(item.likes.toString());
+
+  useEffect(() => {
+    // This effect runs only on the client, after hydration,
+    // so it's safe to use locale-specific formatting.
+    setFormattedLikeCount(likeCount.toLocaleString());
+  }, [likeCount]);
+
 
   const handleLikeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -35,7 +43,7 @@ const VideoActions = ({ item }: { item: FeedItem }) => {
         <Heart 
           className={cn("h-8 w-8 text-white transition-colors", isLiked && "fill-red-500 text-red-500")}
         />
-        <span className="text-xs">{likeCount.toLocaleString()}</span>
+        <span className="text-xs">{formattedLikeCount}</span>
       </Button>
       <CommentSheet commentCount={item.comments}>
         <Button
