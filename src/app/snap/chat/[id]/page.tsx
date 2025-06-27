@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -7,9 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { mockChats } from '@/lib/mock-data';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useState, useRef, useEffect } from 'react';
 
 // Mock messages for demonstration
-const mockMessages = [
+const initialMockMessages = [
   { id: 1, text: 'Hey, how are you?', sender: 'them', timestamp: '10:00 AM' },
   { id: 2, text: 'I\'m good, thanks! How about you?', sender: 'me', timestamp: '10:01 AM' },
   { id: 3, text: 'Doing great! Just saw your new video, it was awesome!', sender: 'them', timestamp: '10:01 AM' },
@@ -21,8 +23,35 @@ export default function ChatPage() {
   const router = useRouter();
   const params = useParams();
   const chatId = params.id;
+  
+  const [messages, setMessages] = useState(initialMockMessages);
+  const [newMessage, setNewMessage] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const chat = mockChats.find((c) => c.id === chatId);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newMessage.trim() === '') return;
+
+    const newMsg = {
+      id: messages.length + 1,
+      text: newMessage,
+      sender: 'me' as const,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setMessages([...messages, newMsg]);
+    setNewMessage('');
+  };
 
   if (!chat) {
     return (
@@ -47,7 +76,7 @@ export default function ChatPage() {
 
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
-          {mockMessages.map((message) => (
+          {messages.map((message) => (
             <div
               key={message.id}
               className={`flex items-end gap-2 ${message.sender === 'me' ? 'justify-end' : 'justify-start'}`}
@@ -63,16 +92,22 @@ export default function ChatPage() {
               </div>
             </div>
           ))}
+          <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
       <footer className="p-2 sm:p-4 border-t shrink-0">
-        <div className="flex items-center gap-2">
-          <Input placeholder="Type a message..." className="flex-1" />
-          <Button size="icon" className="bg-primary">
+        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+          <Input 
+            placeholder="Type a message..." 
+            className="flex-1" 
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+          />
+          <Button type="submit" size="icon" className="bg-primary">
             <Send className="h-5 w-5" />
           </Button>
-        </div>
+        </form>
       </footer>
     </div>
   );
