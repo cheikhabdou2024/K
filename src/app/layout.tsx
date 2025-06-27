@@ -23,10 +23,8 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn('font-body antialiased', 'bg-background text-foreground')}>
-        <div className="relative flex flex-col h-[100dvh] overflow-hidden">
-          <main className="flex-1">{children}</main>
-          <BottomNav />
-        </div>
+        <main className="h-[100dvh]">{children}</main>
+        <BottomNav />
         <Toaster />
       </body>
     </html>
