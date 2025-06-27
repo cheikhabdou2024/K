@@ -175,7 +175,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         ref={videoRef}
         src={item.videoUrl}
         loop
-        muted
         playsInline
         className="w-full h-full object-cover col-start-1 row-start-1"
         poster={item.thumbnailUrl}
