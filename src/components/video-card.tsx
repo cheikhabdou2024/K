@@ -8,15 +8,18 @@ import { CommentSheet } from './comment-sheet';
 import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
-interface VideoCardProps {
-  item: FeedItem;
-  isActive: boolean;
+interface VideoActionsProps {
+  item: {
+    comments: number;
+    shares: number;
+  };
+  isLiked: boolean;
+  likeCount: number;
+  handleLikeClick: (e: React.MouseEvent) => void;
 }
 
-const VideoActions = ({ item }: { item: FeedItem }) => {
-  const [isLiked, setIsLiked] = useState(item.isLiked || false);
-  const [likeCount, setLikeCount] = useState(item.likes);
-  const [formattedLikeCount, setFormattedLikeCount] = useState(item.likes.toString());
+const VideoActions = ({ item, isLiked, likeCount, handleLikeClick }: VideoActionsProps) => {
+  const [formattedLikeCount, setFormattedLikeCount] = useState('');
 
   useEffect(() => {
     // This effect runs only on the client, after hydration,
@@ -24,13 +27,6 @@ const VideoActions = ({ item }: { item: FeedItem }) => {
     setFormattedLikeCount(likeCount.toLocaleString());
   }, [likeCount]);
 
-
-  const handleLikeClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsLiked(!isLiked);
-    setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
-    // In a real app, you'd call an API to update the like status.
-  };
 
   return (
     <div className="absolute bottom-20 right-2 flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
@@ -86,9 +82,20 @@ const VideoInfo = ({ item }: { item: FeedItem }) => (
   </div>
 );
 
+interface VideoCardProps {
+  item: FeedItem;
+  isActive: boolean;
+}
+
 export function VideoCard({ item, isActive }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showHeart, setShowHeart] = useState(false);
+  const lastTap = useRef(0);
+  const heartAnimationTimeout = useRef<NodeJS.Timeout>();
+
+  const [isLiked, setIsLiked] = useState(item.isLiked || false);
+  const [likeCount, setLikeCount] = useState(item.likes);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -114,9 +121,42 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
       }
     }
   };
+
+  const handleLikeClick = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const newIsLiked = !isLiked;
+    setIsLiked(newIsLiked);
+    setLikeCount(count => count + (newIsLiked ? 1 : -1));
+    // In a real app, you would call an API here to persist the like.
+  };
+  
+  const triggerDoubleTapLike = () => {
+    if (!isLiked) {
+      handleLikeClick();
+    }
+      
+    setShowHeart(true);
+    if (heartAnimationTimeout.current) {
+      clearTimeout(heartAnimationTimeout.current);
+    }
+    heartAnimationTimeout.current = setTimeout(() => {
+      setShowHeart(false);
+    }, 800);
+  };
+
+  const handleTap = () => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+    if (now - lastTap.current < DOUBLE_TAP_DELAY) {
+      triggerDoubleTapLike();
+    } else {
+      togglePlay();
+    }
+    lastTap.current = now;
+  };
   
   return (
-    <div className="w-full h-full relative bg-black grid place-items-center" onClick={togglePlay}>
+    <div className="w-full h-full relative bg-black grid place-items-center" onClick={handleTap}>
       <video
         ref={videoRef}
         src={item.videoUrl}
@@ -127,12 +167,17 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         poster={item.thumbnailUrl}
         data-ai-hint="short form video"
       />
+
+      {showHeart && (
+          <Heart fill="white" className="h-24 w-24 text-white col-start-1 row-start-1 z-10 pointer-events-none animate-like-heart" />
+      )}
+      
       {!isPlaying && (
           <Play className="h-20 w-20 text-white/70 pointer-events-none col-start-1 row-start-1" fill="white" />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none col-start-1 row-start-1" />
       <VideoInfo item={item} />
-      <VideoActions item={item} />
+      <VideoActions item={item} isLiked={isLiked} likeCount={likeCount} handleLikeClick={handleLikeClick} />
     </div>
   );
 }
