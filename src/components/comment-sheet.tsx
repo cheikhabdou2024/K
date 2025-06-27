@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -8,11 +9,60 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Button } from './ui/button';
-import { MessageCircle, Mic, Send } from 'lucide-react';
+import { MessageCircle, Mic, Send, Trash2, Play, Pause, Square } from 'lucide-react';
 import { mockComments } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
+import { useState, useRef } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import { Progress } from './ui/progress';
+
+const VoiceCommentPlayer = ({ src }: { src: string }) => {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  const togglePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+      setProgress(progress);
+    }
+  };
+
+  const handleEnded = () => {
+    setIsPlaying(false);
+    setProgress(0);
+  };
+  
+  return (
+    <div className="flex items-center gap-2 bg-primary/10 p-2 rounded-lg">
+       <audio
+          ref={audioRef}
+          src={src}
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={handleEnded}
+          className="hidden"
+        />
+      <Button size="icon" variant="ghost" className="h-8 w-8 text-primary" onClick={togglePlayPause}>
+        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+      </Button>
+      <Progress value={progress} className="h-2 flex-1" />
+    </div>
+  )
+}
 
 export function CommentSheet({
   commentCount,
@@ -21,8 +71,74 @@ export function CommentSheet({
   commentCount: number;
   children: React.ReactNode;
 }) {
+  const { toast } = useToast();
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioURL, setAudioURL] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        setAudioURL(audioUrl);
+        audioChunksRef.current = [];
+        // Stop all tracks on the stream to turn off the mic indicator
+        stream.getTracks().forEach(track => track.stop());
+      };
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Microphone Access Denied',
+        description: 'Please enable microphone permissions in your browser settings.',
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const handleMicClick = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      setAudioURL(null); // Clear previous recording
+      startRecording();
+    }
+  };
+
+  const discardRecording = () => {
+    if (audioURL) {
+      URL.revokeObjectURL(audioURL);
+    }
+    setAudioURL(null);
+  }
+
+  const handleSend = () => {
+    if (audioURL) {
+      toast({ title: 'Success', description: 'Voice comment sent!' });
+      discardRecording();
+    } else {
+       toast({ title: 'Success', description: 'Comment sent!' });
+    }
+    // Logic to clear text input would go here
+  }
+
   return (
-    <Sheet>
+    <Sheet onOpenChange={(open) => !open && stopRecording()}>
       <SheetTrigger asChild>{children}</SheetTrigger>
       <SheetContent
         side="bottom"
@@ -42,10 +158,13 @@ export function CommentSheet({
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <div className="bg-muted p-3 rounded-lg rounded-tl-none">
-                    <p className="font-semibold text-sm">{comment.user.name}</p>
-                    <p className="text-sm">{comment.text}</p>
-                  </div>
+                  <p className="font-semibold text-sm">{comment.user.name}</p>
+                   {comment.text && (
+                    <div className="bg-muted p-3 rounded-lg rounded-tl-none">
+                      <p className="text-sm">{comment.text}</p>
+                    </div>
+                   )}
+                   {comment.audioUrl && <VoiceCommentPlayer src={comment.audioUrl} />}
                   <p className="text-xs text-muted-foreground mt-1">
                     {comment.timestamp}
                   </p>
@@ -55,11 +174,20 @@ export function CommentSheet({
           </div>
         </ScrollArea>
         <div className="mt-auto p-0 flex items-center gap-2 border-t pt-4">
-          <Input placeholder="Add a comment..." className="flex-1" />
-          <Button size="icon" variant="ghost">
-            <Mic className="h-5 w-5" />
+          {audioURL ? (
+            <div className="flex w-full items-center gap-2">
+               <VoiceCommentPlayer src={audioURL} />
+               <Button size="icon" variant="destructive" onClick={discardRecording}>
+                  <Trash2 className="h-5 w-5" />
+               </Button>
+            </div>
+          ) : (
+             <Input placeholder="Add a comment..." className="flex-1" disabled={isRecording} />
+          )}
+          <Button size="icon" variant="ghost" onClick={handleMicClick} disabled={!!audioURL}>
+             {isRecording ? <Square className="h-5 w-5 text-red-500 fill-red-500" /> : <Mic className="h-5 w-5" />}
           </Button>
-          <Button size="icon" className="bg-primary">
+          <Button size="icon" className="bg-primary" onClick={handleSend} >
             <Send className="h-5 w-5" />
           </Button>
         </div>
