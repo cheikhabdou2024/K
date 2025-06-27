@@ -91,7 +91,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
-  const lastTap = useRef(0);
+  const tapTimeout = useRef<NodeJS.Timeout | null>(null);
   const heartAnimationTimeout = useRef<NodeJS.Timeout>();
 
   const [isLiked, setIsLiked] = useState(item.isLiked || false);
@@ -108,6 +108,16 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         setIsPlaying(false);
       }
     }
+
+    // Cleanup timeouts when the component becomes inactive or unmounts
+    return () => {
+      if (tapTimeout.current) {
+        clearTimeout(tapTimeout.current);
+      }
+      if (heartAnimationTimeout.current) {
+        clearTimeout(heartAnimationTimeout.current);
+      }
+    };
   }, [isActive]);
 
   const togglePlay = () => {
@@ -145,14 +155,18 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   };
 
   const handleTap = () => {
-    const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300;
-    if (now - lastTap.current < DOUBLE_TAP_DELAY) {
+    // If a timeout is already set, it means this is a double tap
+    if (tapTimeout.current) {
+      clearTimeout(tapTimeout.current);
+      tapTimeout.current = null;
       triggerDoubleTapLike();
     } else {
-      togglePlay();
+      // Otherwise, it's a single tap. Set a timeout to handle play/pause
+      tapTimeout.current = setTimeout(() => {
+        togglePlay();
+        tapTimeout.current = null;
+      }, 300); // Wait 300ms to see if a second tap occurs
     }
-    lastTap.current = now;
   };
   
   return (
