@@ -15,9 +15,9 @@ import {z} from 'genkit';
 const AiContentScanInputSchema = z.object({
   content: z
     .string()
-    .describe('The content to be scanned, which can be text or a data URI for images/videos.'),
+    .describe('The content to be scanned, which can be text or a data URI for images/videos/audio.'),
   contentType: z
-    .enum(['text', 'image', 'video'])
+    .enum(['text', 'image', 'video', 'audio'])
     .describe('The type of the content being scanned.'),
 });
 export type AiContentScanInput = z.infer<typeof AiContentScanInputSchema>;
@@ -70,8 +70,8 @@ const aiTextScanPrompt = ai.definePrompt({
   config: safetyConfig,
 });
 
-const aiMediaScanPrompt = ai.definePrompt({
-  name: 'aiMediaScanPrompt',
+const aiNonTextScanPrompt = ai.definePrompt({
+  name: 'aiNonTextScanPrompt',
   input: {schema: z.object({content: z.string()})},
   output: {schema: AiContentScanOutputSchema},
   prompt: `${basePrompt}\n\nAnalyze the following media content: {{media url=content}}`,
@@ -90,7 +90,7 @@ const aiContentScanFlow = ai.defineFlow(
       const {output} = await aiTextScanPrompt({ content: input.content });
       return output!;
     } else {
-      const {output} = await aiMediaScanPrompt({ content: input.content });
+      const {output} = await aiNonTextScanPrompt({ content: input.content });
       return output!;
     }
   }

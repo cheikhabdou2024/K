@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -9,15 +8,15 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Button } from './ui/button';
-import { MessageCircle, Mic, Send, Trash2, Play, Pause, Square } from 'lucide-react';
+import { MessageCircle, Mic, Send, Trash2, Play, Pause, Square, Loader2 } from 'lucide-react';
 import { mockComments } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { Progress } from './ui/progress';
+import { scanCommentAction } from '@/app/comments/actions';
 
 const VoiceCommentPlayer = ({ src }: { src: string }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -64,6 +63,14 @@ const VoiceCommentPlayer = ({ src }: { src: string }) => {
   )
 }
 
+const blobToDataUri = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+
 export function CommentSheet({
   commentCount,
   children,
@@ -73,14 +80,16 @@ export function CommentSheet({
 }) {
   const { toast } = useToast();
   const [isRecording, setIsRecording] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [audioURL, setAudioURL] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
       };
@@ -89,7 +98,6 @@ export function CommentSheet({
         const audioUrl = URL.createObjectURL(audioBlob);
         setAudioURL(audioUrl);
         audioChunksRef.current = [];
-        // Stop all tracks on the stream to turn off the mic indicator
         stream.getTracks().forEach(track => track.stop());
       };
       mediaRecorderRef.current.start();
@@ -115,7 +123,7 @@ export function CommentSheet({
     if (isRecording) {
       stopRecording();
     } else {
-      setAudioURL(null); // Clear previous recording
+      discardRecording();
       startRecording();
     }
   };
@@ -127,14 +135,41 @@ export function CommentSheet({
     setAudioURL(null);
   }
 
-  const handleSend = () => {
-    if (audioURL) {
-      toast({ title: 'Success', description: 'Voice comment sent!' });
-      discardRecording();
-    } else {
-       toast({ title: 'Success', description: 'Comment sent!' });
+  const handleSend = async () => {
+    if (!audioURL && !commentText.trim()) {
+      return;
     }
-    // Logic to clear text input would go here
+    setIsSending(true);
+    try {
+      let result;
+      if (audioURL) {
+        const audioBlob = await fetch(audioURL).then(res => res.blob());
+        const audioDataUri = await blobToDataUri(audioBlob);
+        result = await scanCommentAction(audioDataUri, 'audio');
+      } else {
+        result = await scanCommentAction(commentText, 'text');
+      }
+
+      if (result.isSafe) {
+        toast({ title: 'Success', description: 'Comment sent!' });
+        discardRecording();
+        setCommentText('');
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Content moderation error',
+          description: result.reason,
+        });
+      }
+    } catch (error) {
+       toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to send comment. Please try again.',
+      });
+    } finally {
+      setIsSending(false);
+    }
   }
 
   return (
@@ -177,18 +212,24 @@ export function CommentSheet({
           {audioURL ? (
             <div className="flex w-full items-center gap-2">
                <VoiceCommentPlayer src={audioURL} />
-               <Button size="icon" variant="destructive" onClick={discardRecording}>
+               <Button size="icon" variant="destructive" onClick={discardRecording} disabled={isSending}>
                   <Trash2 className="h-5 w-5" />
                </Button>
             </div>
           ) : (
-             <Input placeholder="Add a comment..." className="flex-1" disabled={isRecording} />
+             <Input 
+              placeholder="Add a comment..." 
+              className="flex-1" 
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              disabled={isRecording || isSending}
+            />
           )}
-          <Button size="icon" variant="ghost" onClick={handleMicClick} disabled={!!audioURL}>
+          <Button size="icon" variant="ghost" onClick={handleMicClick} disabled={!!audioURL || isSending}>
              {isRecording ? <Square className="h-5 w-5 text-red-500 fill-red-500" /> : <Mic className="h-5 w-5" />}
           </Button>
-          <Button size="icon" className="bg-primary" onClick={handleSend} >
-            <Send className="h-5 w-5" />
+          <Button size="icon" className="bg-primary" onClick={handleSend} disabled={isSending || isRecording}>
+            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
           </Button>
         </div>
       </SheetContent>
