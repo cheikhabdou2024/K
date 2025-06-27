@@ -21,6 +21,7 @@ export interface FeedItem {
   likes: number;
   comments: number;
   shares: number;
+  isLiked?: boolean;
 }
 
 export interface Comment {
@@ -75,6 +76,7 @@ export const mockFeedItems: FeedItem[] = [
     likes: 12345,
     comments: 678,
     shares: 910,
+    isLiked: true,
   },
   {
     id: '2',
@@ -97,6 +99,7 @@ export const mockFeedItems: FeedItem[] = [
     likes: 89012,
     comments: 345,
     shares: 678,
+    isLiked: true,
   },
   {
     id: '4',

@@ -6,42 +6,59 @@ import { Button } from './ui/button';
 import { Heart, MessageCircle, Send, Music, Play } from 'lucide-react';
 import { CommentSheet } from './comment-sheet';
 import { useRef, useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface VideoCardProps {
   item: FeedItem;
   isActive: boolean;
 }
 
-const VideoActions = ({ item }: { item: FeedItem }) => (
-  <div className="absolute bottom-20 right-2 flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
-    <Button
-      variant="ghost"
-      size="icon"
-      className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
-    >
-      <Heart className="h-8 w-8 text-white fill-transparent" />
-      <span className="text-xs">{item.likes}</span>
-    </Button>
-    <CommentSheet commentCount={item.comments}>
+const VideoActions = ({ item }: { item: FeedItem }) => {
+  const [isLiked, setIsLiked] = useState(item.isLiked || false);
+  const [likeCount, setLikeCount] = useState(item.likes);
+
+  const handleLikeClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsLiked(!isLiked);
+    setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
+    // In a real app, you'd call an API to update the like status.
+  };
+
+  return (
+    <div className="absolute bottom-20 right-2 flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
+        onClick={handleLikeClick}
+      >
+        <Heart 
+          className={cn("h-8 w-8 text-white transition-colors", isLiked && "fill-red-500 text-red-500")}
+        />
+        <span className="text-xs">{likeCount.toLocaleString()}</span>
+      </Button>
+      <CommentSheet commentCount={item.comments}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
+        >
+          <MessageCircle className="h-8 w-8 text-white" />
+          <span className="text-xs">{item.comments}</span>
+        </Button>
+      </CommentSheet>
       <Button
         variant="ghost"
         size="icon"
         className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
       >
-        <MessageCircle className="h-8 w-8 text-white" />
-        <span className="text-xs">{item.comments}</span>
+        <Send className="h-8 w-8 text-white" />
+        <span className="text-xs">{item.shares}</span>
       </Button>
-    </CommentSheet>
-    <Button
-      variant="ghost"
-      size="icon"
-      className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
-    >
-      <Send className="h-8 w-8 text-white" />
-      <span className="text-xs">{item.shares}</span>
-    </Button>
-  </div>
-);
+    </div>
+  );
+};
+
 
 const VideoInfo = ({ item }: { item: FeedItem }) => (
   <div className="absolute bottom-4 left-4 right-4 text-white" onClick={(e) => e.stopPropagation()}>

@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockUser, mockFeedItems } from '@/lib/mock-data';
-import { User, Video, Settings, Edit, Share2 } from 'lucide-react';
+import { User, Video, Settings, Edit, Share2, Heart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -55,32 +55,51 @@ const ProfileHeader = () => (
   </div>
 );
 
-const ProfileContent = () => (
-  <Tabs defaultValue="videos" className="w-full">
-    <TabsList className="grid w-full grid-cols-2 bg-primary/10 mx-auto max-w-sm">
-      <TabsTrigger value="videos" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-        <Video className="h-4 w-4" /> Videos
-      </TabsTrigger>
-      <TabsTrigger value="liked" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-        <User className="h-4 w-4" /> Liked
-      </TabsTrigger>
-    </TabsList>
-    <TabsContent value="videos">
-      <div className="grid grid-cols-3 gap-1 mt-2">
-        {mockFeedItems.map((item) => (
-          <div key={item.id} className="relative aspect-[9/16]">
-            <Image src={item.thumbnailUrl} alt="video thumbnail" fill className="object-cover" data-ai-hint="video thumbnail" />
-          </div>
+const VideoGrid = ({ items }: { items: { id: string, thumbnailUrl: string }[] }) => (
+    <div className="grid grid-cols-3 gap-1 mt-2">
+        {items.map((item) => (
+            <div key={item.id} className="relative aspect-[9/16]">
+                <Image src={item.thumbnailUrl} alt="video thumbnail" fill className="object-cover" data-ai-hint="video thumbnail" />
+            </div>
         ))}
-      </div>
-    </TabsContent>
-    <TabsContent value="liked">
-      <div className="text-center py-10">
-        <p className="text-muted-foreground">This user hasn't liked any videos yet.</p>
-      </div>
-    </TabsContent>
-  </Tabs>
+    </div>
 );
+
+const ProfileContent = () => {
+    const userVideos = mockFeedItems.filter(item => item.user.id === mockUser.id);
+    const likedVideos = mockFeedItems.filter(item => item.isLiked);
+
+    return (
+        <Tabs defaultValue="videos" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-primary/10 mx-auto max-w-sm">
+            <TabsTrigger value="videos" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Video className="h-4 w-4" /> Videos ({userVideos.length})
+            </TabsTrigger>
+            <TabsTrigger value="liked" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Heart className="h-4 w-4" /> Liked ({likedVideos.length})
+            </TabsTrigger>
+            </TabsList>
+            <TabsContent value="videos">
+                {userVideos.length > 0 ? (
+                    <VideoGrid items={userVideos} />
+                ) : (
+                    <div className="text-center py-10">
+                        <p className="text-muted-foreground">You haven't posted any videos yet.</p>
+                    </div>
+                )}
+            </TabsContent>
+            <TabsContent value="liked">
+                {likedVideos.length > 0 ? (
+                    <VideoGrid items={likedVideos} />
+                ) : (
+                    <div className="text-center py-10">
+                        <p className="text-muted-foreground">You haven't liked any videos yet.</p>
+                    </div>
+                )}
+            </TabsContent>
+        </Tabs>
+    );
+};
 
 export default function ProfilePage() {
   return (
