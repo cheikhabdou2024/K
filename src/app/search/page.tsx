@@ -6,7 +6,7 @@ import Image from 'next/image';
 
 export default function SearchPage() {
   return (
-    <div className="h-full overflow-y-auto p-4 space-y-4 pb-20">
+    <div className="h-full overflow-y-auto p-4 space-y-4">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <Input placeholder="Search users, hashtags, sounds..." className="pl-10 h-12 text-base" />

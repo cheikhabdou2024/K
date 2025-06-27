@@ -56,7 +56,7 @@ const Chats = () => (
 
 export default function SnapPage() {
   return (
-    <div className="h-full flex flex-col pb-16">
+    <div className="h-full flex flex-col">
       <header className="p-4">
         <h1 className="text-3xl font-bold font-headline text-primary">Snap</h1>
       </header>

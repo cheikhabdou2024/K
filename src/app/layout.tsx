@@ -22,8 +22,8 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
       </head>
-      <body className={cn('font-body antialiased', 'bg-background text-foreground')}>
-        <main className="h-[100dvh]">{children}</main>
+      <body className={cn('font-body antialiased', 'bg-background text-foreground', 'h-[100dvh] flex flex-col')}>
+        <main className="flex-1 min-h-0">{children}</main>
         <BottomNav />
         <Toaster />
       </body>
