@@ -139,7 +139,7 @@ export default function CreateStoryPage() {
           </Button>
         </div>
 
-        <div className="absolute bottom-8 w-full flex justify-center items-center gap-8">
+        <div className="absolute bottom-8 w-full flex justify-center items-center gap-4 sm:gap-8">
             {capturedImage ? (
                 <>
                     <Button
@@ -164,7 +164,7 @@ export default function CreateStoryPage() {
                 </>
             ) : (
                 <button
-                    className="h-20 w-20 rounded-full border-4 border-white bg-white/30 transition-colors hover:bg-white/50"
+                    className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-4 border-white bg-white/30 transition-colors hover:bg-white/50"
                     onClick={handleCapture}
                     aria-label="Capture photo"
                 />
