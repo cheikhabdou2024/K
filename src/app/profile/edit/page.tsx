@@ -1,4 +1,4 @@
-
+// src/app/profile/edit/page.tsx
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,12 +16,17 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { mockUser } from '@/lib/mock-data';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, ArrowLeft, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/use-auth';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db, storage } from '@/lib/firebase';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { FirestoreUser } from '@/lib/mock-data';
 
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -34,22 +39,84 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
+const LoadingSkeleton = () => (
+    <div className="container mx-auto max-w-2xl py-8 px-4 animate-pulse">
+        <div className="mb-8 flex items-center gap-4">
+            <Skeleton className="h-10 w-10 rounded-md" />
+            <Skeleton className="h-8 w-40 rounded-md" />
+        </div>
+        <div className="space-y-8">
+            <div className="flex justify-center">
+                <Skeleton className="h-32 w-32 rounded-full" />
+            </div>
+            <div className="space-y-2">
+                <Skeleton className="h-4 w-20 rounded-md" />
+                <Skeleton className="h-10 w-full rounded-md" />
+            </div>
+             <div className="space-y-2">
+                <Skeleton className="h-4 w-20 rounded-md" />
+                <Skeleton className="h-10 w-full rounded-md" />
+            </div>
+            <div className="space-y-2">
+                <Skeleton className="h-4 w-20 rounded-md" />
+                <Skeleton className="h-20 w-full rounded-md" />
+            </div>
+            <Skeleton className="h-11 w-full rounded-md" />
+        </div>
+    </div>
+);
+
+
 export default function EditProfilePage() {
+  const { user: authUser, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(mockUser.avatarUrl);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [initialAvatar, setInitialAvatar] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      name: mockUser.name,
-      username: mockUser.username,
-      bio: mockUser.bio,
+      name: '',
+      username: '',
+      bio: '',
     },
     mode: 'onChange',
   });
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!authUser) {
+      router.replace('/login');
+      return;
+    }
+
+    const fetchUserData = async () => {
+      try {
+        const userDocRef = doc(db, 'users', authUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data() as FirestoreUser;
+          form.reset({
+            name: userData.name,
+            username: userData.username,
+            bio: userData.bio || '',
+          });
+          setAvatarPreview(userData.avatarUrl);
+          setInitialAvatar(userData.avatarUrl);
+        }
+      } catch (err) {
+        toast({ variant: 'destructive', title: 'Failed to load profile' });
+      } finally {
+        setPageLoading(false);
+      }
+    };
+    fetchUserData();
+  }, [authUser, authLoading, router, form, toast]);
+
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -71,19 +138,42 @@ export default function EditProfilePage() {
   };
 
   async function onSubmit(data: ProfileFormValues) {
+    if (!authUser) return;
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // In a real app, you would update the user data here.
-    console.log('Updated profile data:', { ...data, avatar: avatarPreview });
-    
-    toast({
-      title: 'Profile Updated',
-      description: 'Your changes have been saved successfully.',
-    });
-    router.push('/profile');
-    setIsSubmitting(false);
+    try {
+      let avatarUrl = initialAvatar;
+
+      // If avatar was changed, upload it to storage
+      if (avatarPreview && avatarPreview !== initialAvatar) {
+        const storageRef = ref(storage, `avatars/${authUser.uid}`);
+        const uploadResult = await uploadString(storageRef, avatarPreview, 'data_url');
+        avatarUrl = await getDownloadURL(uploadResult.ref);
+      }
+
+      // Update user document in Firestore
+      const userDocRef = doc(db, 'users', authUser.uid);
+      await updateDoc(userDocRef, {
+        ...data,
+        avatarUrl,
+      });
+
+      toast({
+        title: 'Profile Updated',
+        description: 'Your changes have been saved successfully.',
+      });
+      router.push('/profile');
+
+    } catch (error) {
+      console.error("Error updating profile: ", error);
+      toast({ variant: 'destructive', title: 'Update failed', description: 'Could not save your changes.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+  
+  if (pageLoading || authLoading) {
+    return <LoadingSkeleton />;
   }
 
   return (
@@ -103,8 +193,8 @@ export default function EditProfilePage() {
             <div className="flex justify-center">
                 <div className="relative">
                     <Avatar className="w-32 h-32 border-4 border-primary">
-                        <AvatarImage src={avatarPreview || ''} alt={mockUser.name} />
-                        <AvatarFallback>{mockUser.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={avatarPreview || ''} />
+                        <AvatarFallback><Loader2 className="animate-spin" /></AvatarFallback>
                     </Avatar>
                     <input
                         type="file"
