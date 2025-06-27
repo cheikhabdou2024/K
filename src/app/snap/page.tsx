@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -7,8 +8,10 @@ import { mockStories, mockChats } from '@/lib/mock-data';
 import { Search, Camera } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
+import { useState } from 'react';
+import { StoryViewer } from '@/components/story-viewer';
 
-const Stories = () => (
+const Stories = ({ onStoryClick }: { onStoryClick: (index: number) => void }) => (
   <div className="px-2 sm:px-4">
     <h2 className="text-lg font-bold font-headline text-primary mb-2">Stories</h2>
     <ScrollArea className="w-full whitespace-nowrap">
@@ -21,8 +24,12 @@ const Stories = () => (
             <span className="text-xs w-full truncate text-center">Add Story</span>
           </div>
         </Link>
-        {mockStories.map((story) => (
-          <div key={story.id} className="flex flex-col items-center space-y-1 w-16 sm:w-20">
+        {mockStories.map((story, index) => (
+          <div
+            key={story.id}
+            className="flex flex-col items-center space-y-1 w-16 sm:w-20 cursor-pointer"
+            onClick={() => onStoryClick(index)}
+          >
             <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-full p-0.5 border-2 border-primary">
               <Avatar className="h-full w-full">
                 <AvatarImage src={story.user.avatarUrl} alt={story.user.name} />
@@ -64,22 +71,42 @@ const Chats = () => (
 );
 
 export default function SnapPage() {
+  const [activeStoryIndex, setActiveStoryIndex] = useState<number | null>(null);
+
+  const handleStoryClick = (index: number) => {
+    setActiveStoryIndex(index);
+  };
+
+  const handleCloseViewer = () => {
+    setActiveStoryIndex(null);
+  };
+
   return (
-    <div className="h-full flex flex-col">
-      <header className="p-2 sm:p-4">
-        <h1 className="text-2xl sm:text-3xl font-bold font-headline text-primary">Snap</h1>
-      </header>
-      <div className="px-2 sm:px-4 mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input placeholder="Search friends" className="pl-10 h-10" />
+    <>
+      <div className="h-full flex flex-col">
+        <header className="p-2 sm:p-4">
+          <h1 className="text-2xl sm:text-3xl font-bold font-headline text-primary">Snap</h1>
+        </header>
+        <div className="px-2 sm:px-4 mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input placeholder="Search friends" className="pl-10 h-10" />
+          </div>
+        </div>
+        <Stories onStoryClick={handleStoryClick} />
+        <Separator className="my-2 sm:my-4" />
+        <div className="flex-1 overflow-y-auto">
+          <Chats />
         </div>
       </div>
-      <Stories />
-      <Separator className="my-2 sm:my-4" />
-      <div className="flex-1 overflow-y-auto">
-        <Chats />
-      </div>
-    </div>
+
+      {activeStoryIndex !== null && (
+        <StoryViewer
+          stories={mockStories}
+          initialStoryIndex={activeStoryIndex}
+          onClose={handleCloseViewer}
+        />
+      )}
+    </>
   );
 }
