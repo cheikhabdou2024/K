@@ -33,7 +33,7 @@ export default function Home() {
   }, [api]);
 
   return (
-    <div className="h-full w-full bg-black">
+    <div className="h-[calc(100dvh-4rem)] w-full bg-black">
       <Carousel 
         setApi={setApi} 
         className="w-full h-full"
