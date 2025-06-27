@@ -1,15 +1,27 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Search, Plus, Camera, User } from 'lucide-react';
+import { Home, Search, Plus, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const SnapIcon = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+  >
+    <path d="M2.003 11.43c0 2.93 1.21 5.58 3.19 7.45.1.1.25.12.35 0l1.83-1.83c.1-.1.1-.25 0-.35a6.4 6.4 0 01-.98-3.04c0-3.53 2.8-6.4 6.3-6.4s6.3 2.87 6.3 6.4c0 1.25-.36 2.4-.98 3.34-.1.1-.1.25 0 .35l1.83 1.83c.1.1.25.1.35 0 1.98-1.87 3.19-4.52 3.19-7.45 0-5.3-4.2-9.6-9.4-9.6s-9.4 4.3-9.4 9.6z" />
+  </svg>
+);
 
 const navItems = [
   { href: '/', icon: Home, label: 'Home' },
   { href: '/search', icon: Search, label: 'Search' },
   { href: '/create', icon: Plus, label: 'Create' },
-  { href: '/snap', icon: Camera, label: 'Snap' },
+  { href: '/snap', icon: SnapIcon, label: 'Snap' },
   { href: '/profile', icon: User, label: 'Profile' },
 ];
 
