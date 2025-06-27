@@ -45,7 +45,14 @@ export interface Chat {
     timestamp: string;
 }
 
-export const mockUser: User & { stats: { following: number; followers: string; likes: string }, bio: string } = {
+export const mockUser: User & {
+  stats: { following: number; followers: string; likes: string };
+  bio: string;
+  analytics: {
+    profileViews: { day: string; views: number }[];
+    monthlyLikes: { month: string; likes: number }[];
+  };
+} = {
   id: 'user-1',
   name: 'Jane Doe',
   username: 'janedoe',
@@ -55,7 +62,26 @@ export const mockUser: User & { stats: { following: number; followers: string; l
     followers: '1.2M',
     likes: '10.5M',
   },
-  bio: 'Just a girl having fun and creating content. Welcome to my world! ✨'
+  bio: 'Just a girl having fun and creating content. Welcome to my world! ✨',
+  analytics: {
+    profileViews: [
+      { day: 'Mon', views: 234 },
+      { day: 'Tue', views: 345 },
+      { day: 'Wed', views: 456 },
+      { day: 'Thu', views: 321 },
+      { day: 'Fri', views: 567 },
+      { day: 'Sat', views: 789 },
+      { day: 'Sun', views: 987 },
+    ],
+    monthlyLikes: [
+      { month: 'Jan', likes: 1200 },
+      { month: 'Feb', likes: 1800 },
+      { month: 'Mar', likes: 2500 },
+      { month: 'Apr', likes: 2200 },
+      { month: 'May', likes: 3100 },
+      { month: 'Jun', likes: 4500 },
+    ],
+  },
 };
 
 const users: User[] = [
