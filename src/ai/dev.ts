@@ -2,3 +2,4 @@ import { config } from 'dotenv';
 config();
 
 import '@/ai/flows/ai-content-scanning.ts';
+import '@/ai/flows/ai-search-flow.ts';
