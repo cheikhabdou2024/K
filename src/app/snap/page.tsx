@@ -1,21 +1,26 @@
+'use client';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { mockStories, mockChats } from '@/lib/mock-data';
 import { Search, Camera } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
 
 const Stories = () => (
   <div className="px-4">
     <h2 className="text-lg font-bold font-headline text-primary mb-2">Stories</h2>
     <ScrollArea className="w-full whitespace-nowrap">
       <div className="flex w-max space-x-4 pb-4">
-        <div className="flex flex-col items-center space-y-1 w-20">
-          <button className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-            <Camera className="h-6 w-6 text-muted-foreground" />
-          </button>
-          <span className="text-xs w-full truncate text-center">Add Story</span>
-        </div>
+        <Link href="/snap/create">
+          <div className="flex flex-col items-center space-y-1 w-20 cursor-pointer group">
+            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+              <Camera className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <span className="text-xs w-full truncate text-center">Add Story</span>
+          </div>
+        </Link>
         {mockStories.map((story) => (
           <div key={story.id} className="flex flex-col items-center space-y-1 w-20">
             <div className="h-16 w-16 rounded-full p-0.5 border-2 border-primary">
