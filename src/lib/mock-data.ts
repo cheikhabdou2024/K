@@ -1,3 +1,4 @@
+import type { Timestamp } from "firebase/firestore";
 
 export interface User {
   id: string;
@@ -25,9 +26,10 @@ export interface Sound {
   title: string;
 }
 
-export interface FeedItem {
+// Represents the data structure for a post document in Firestore.
+export interface FirestorePost {
   id: string;
-  user: User;
+  userId: string;
   videoUrl: string;
   thumbnailUrl: string;
   caption: string;
@@ -35,8 +37,16 @@ export interface FeedItem {
   likes: number;
   comments: number;
   shares: number;
-  isLiked?: boolean;
+  createdAt: Timestamp;
 }
+
+// Represents a post with its user data populated for use in the client.
+export interface FeedItem extends Omit<FirestorePost, 'userId' | 'createdAt'> {
+  user: User;
+  isLiked?: boolean;
+  createdAt: { seconds: number; nanoseconds: number; }; // Replicate Timestamp structure for client
+}
+
 
 export interface Comment {
   id:string;
@@ -78,6 +88,7 @@ export const mockFeedItems: FeedItem[] = [
     comments: 678,
     shares: 910,
     isLiked: true,
+    createdAt: { seconds: 1672531200, nanoseconds: 0 } // Jan 1, 2023
   },
   {
     id: '2',
@@ -89,6 +100,7 @@ export const mockFeedItems: FeedItem[] = [
     likes: 234567,
     comments: 1234,
     shares: 5678,
+    createdAt: { seconds: 1672531200, nanoseconds: 0 }
   },
   {
     id: '3',
@@ -101,6 +113,7 @@ export const mockFeedItems: FeedItem[] = [
     comments: 345,
     shares: 678,
     isLiked: true,
+    createdAt: { seconds: 1672531200, nanoseconds: 0 }
   },
   {
     id: '4',
@@ -108,10 +121,11 @@ export const mockFeedItems: FeedItem[] = [
     videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
     thumbnailUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerJoyrides.jpg',
     caption: 'Cooking up a storm in the kitchen! 🍝 #recipe #foodtok',
-    sound: { id: 'sound-4', title: 'Italian Dinner Music - ChefSounds' },
+    sound: { id: 'sound-4', title: 'Original Sound - ChefSounds' },
     likes: 54321,
     comments: 987,
     shares: 123,
+    createdAt: { seconds: 1672531200, nanoseconds: 0 }
   },
 ];
 

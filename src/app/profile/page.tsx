@@ -1,20 +1,20 @@
+
 // src/app/profile/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
-import type { FirestoreUser, FeedItem } from '@/lib/mock-data';
-import { mockFeedItems } from '@/lib/mock-data';
+import type { FirestoreUser, FeedItem, FirestorePost } from '@/lib/mock-data';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Video, Settings, Edit, Share2, Heart, LineChart, Loader2, LogOut } from 'lucide-react';
+import { User, Video, Settings, Edit, Share2, Heart, LineChart, LogOut } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
@@ -140,9 +140,9 @@ const AnalyticsContent = ({ user }: { user: FirestoreUser }) => (
   </div>
 );
 
-const ProfileContent = ({ user }: { user: FirestoreUser }) => {
-  const userVideos = mockFeedItems.filter((item) => item.user.id === user.id); // Still mock for now
-  const likedVideos = mockFeedItems.filter((item) => item.isLiked); // Still mock for now
+const ProfileContent = ({ user, userVideos }: { user: FirestoreUser, userVideos: FeedItem[] }) => {
+  // `likedVideos` is still mock for now, will be implemented in a future step.
+  const likedVideos: FeedItem[] = []; 
 
   return (
     <Tabs defaultValue="videos" className="w-full">
@@ -200,6 +200,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
   const [userData, setUserData] = useState<FirestoreUser | null>(null);
+  const [userVideos, setUserVideos] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -212,13 +213,31 @@ export default function ProfilePage() {
 
       try {
         setLoading(true);
+        // Fetch user profile
         const userDocRef = doc(db, 'users', authUser.uid);
         const userDoc = await getDoc(userDocRef);
+        
         if (userDoc.exists()) {
-          setUserData(userDoc.data() as FirestoreUser);
+          const fetchedUserData = userDoc.data() as FirestoreUser;
+          setUserData(fetchedUserData);
+          
+          // Fetch user's posts
+          const postsQuery = query(collection(db, 'posts'), where('userId', '==', authUser.uid), orderBy('createdAt', 'desc'));
+          const postsSnapshot = await getDocs(postsQuery);
+          const postsData = postsSnapshot.docs.map(doc => {
+              const post = doc.data() as FirestorePost;
+              // Convert Firestore Timestamp to a plain object
+              const createdAt = {
+                  seconds: post.createdAt.seconds,
+                  nanoseconds: post.createdAt.nanoseconds,
+              };
+              return { ...post, user: fetchedUserData, createdAt };
+          });
+          setUserVideos(postsData);
+
         } else {
           toast({ variant: 'destructive', title: 'Error', description: 'User profile not found.' });
-          router.push('/signup'); // Or handle error appropriately
+          router.push('/signup');
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -266,7 +285,7 @@ export default function ProfilePage() {
   return (
     <div className="h-full overflow-y-auto pb-4">
       <ProfileHeader user={userData} onSignOut={handleSignOut} />
-      <ProfileContent user={userData} />
+      <ProfileContent user={userData} userVideos={userVideos} />
     </div>
   );
 }

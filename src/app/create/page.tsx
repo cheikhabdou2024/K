@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,6 +20,12 @@ import { scanContentAction } from './actions';
 import { useState, useRef, useEffect } from 'react';
 import { Loader2, UploadCloud, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
+import { db, storage } from '@/lib/firebase';
+import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import type { FirestorePost } from '@/lib/mock-data';
 
 const FormSchema = z.object({
   caption: z.string().min(10, {
@@ -41,6 +48,8 @@ const fileToDataUri = (file: File) =>
 
 export default function CreatePage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const { user: authUser } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
@@ -55,13 +64,16 @@ export default function CreatePage() {
   });
 
   useEffect(() => {
+    if (!authUser) {
+      router.replace('/login?from=create');
+    }
     // Clean up the object URL to avoid memory leaks
     return () => {
       if (videoPreview) {
         URL.revokeObjectURL(videoPreview);
       }
     };
-  }, [videoPreview]);
+  }, [videoPreview, authUser, router]);
 
   const handleFileChange = (file: File | null) => {
     if (videoPreview) {
@@ -119,26 +131,67 @@ export default function CreatePage() {
       });
       return;
     }
+    if (!authUser) {
+        toast({ variant: 'destructive', title: 'Not authenticated', description: 'You must be logged in to post.' });
+        router.push('/login');
+        return;
+    }
+
     setIsSubmitting(true);
     try {
+      // 1. Scan content with AI
       const videoDataUri = await fileToDataUri(videoFile);
-      const result = await scanContentAction(data.caption, videoDataUri);
+      const scanResult = await scanContentAction(data.caption, videoDataUri);
 
-      if (result.isSafe) {
-        toast({
-          title: 'Content is safe!',
-          description: 'Your post has been successfully created.',
-        });
-        form.reset();
-        handleFileChange(null);
-      } else {
+      if (!scanResult.isSafe) {
         toast({
           variant: 'destructive',
           title: 'Content moderation error',
-          description: result.reason || 'This content violates our community guidelines.',
+          description: scanResult.reason || 'This content violates our community guidelines.',
         });
+        setIsSubmitting(false);
+        return;
       }
+      
+      toast({ title: 'Content is safe!', description: 'Now uploading your post...' });
+
+      // 2. Upload video to Firebase Storage
+      const newPostRef = doc(collection(db, 'posts'));
+      const videoStorageRef = ref(storage, `videos/${authUser.uid}/${newPostRef.id}`);
+      await uploadBytes(videoStorageRef, videoFile);
+      const videoUrl = await getDownloadURL(videoStorageRef);
+
+      // 3. Create post document in Firestore
+      // For a real app, you'd generate a thumbnail on the backend. Here we use a placeholder.
+      const thumbnailUrl = `https://placehold.co/480x854.png`; 
+
+      const newPost: Omit<FirestorePost, 'createdAt'> & { createdAt: any } = {
+        id: newPostRef.id,
+        userId: authUser.uid,
+        videoUrl,
+        thumbnailUrl,
+        caption: data.caption,
+        sound: { id: `sound-${newPostRef.id}`, title: 'Original Sound' },
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        createdAt: serverTimestamp(),
+      };
+      
+      await setDoc(newPostRef, newPost);
+
+      toast({
+        title: 'Post Successful!',
+        description: 'Your video is now live.',
+      });
+
+      // 4. Reset form and navigate
+      form.reset();
+      handleFileChange(null);
+      router.push('/profile');
+
     } catch (error) {
+      console.error("Error creating post:", error);
       toast({
         variant: 'destructive',
         title: 'Upload failed',
@@ -229,7 +282,7 @@ export default function CreatePage() {
           />
           <Button type="submit" disabled={isSubmitting} className="w-full font-bold">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? 'Scanning...' : 'Post'}
+            {isSubmitting ? 'Posting...' : 'Post'}
           </Button>
         </form>
       </Form>
