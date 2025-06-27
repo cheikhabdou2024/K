@@ -43,7 +43,11 @@ const Chats = () => (
     <h2 className="text-lg font-bold font-headline text-primary mb-2">Chats</h2>
     <div className="space-y-1">
       {mockChats.map((chat) => (
-        <div key={chat.id} className="flex items-center p-2 rounded-lg hover:bg-primary/10 cursor-pointer">
+        <Link
+          key={chat.id}
+          href={`/snap/chat/${chat.id}`}
+          className="flex items-center p-2 rounded-lg hover:bg-primary/10"
+        >
           <Avatar className="h-10 w-10 sm:h-12 sm:w-12 mr-2 sm:mr-4">
             <AvatarImage src={chat.user.avatarUrl} alt={chat.user.name} />
             <AvatarFallback>{chat.user.name.charAt(0)}</AvatarFallback>
@@ -53,7 +57,7 @@ const Chats = () => (
             <p className="text-sm text-muted-foreground truncate">{chat.lastMessage}</p>
           </div>
           <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">{chat.timestamp}</span>
-        </div>
+        </Link>
       ))}
     </div>
   </div>
