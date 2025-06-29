@@ -4,7 +4,7 @@
 import type { FeedItem, User } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
-import { Heart, MessageCircle, Send, Play, Settings, Plus } from 'lucide-react';
+import { Heart, MessageCircle, Send, Play, Settings, Plus, Eye } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { CommentSheet } from './comment-sheet';
@@ -145,6 +145,32 @@ interface VideoCardProps {
 const getDistance = (p1: {x:number, y:number}, p2: {x:number, y:number}) => {
   return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
 };
+
+const ViewCount = ({ count }: { count: number }) => {
+  const [formattedCount, setFormattedCount] = useState<string>('');
+
+  useEffect(() => {
+    // Intl.NumberFormat is client-side, so use useEffect to prevent hydration mismatch.
+    try {
+      const formatter = new Intl.NumberFormat('en-US', {
+        notation: 'compact',
+        maximumFractionDigits: 1,
+      });
+      setFormattedCount(formatter.format(count));
+    } catch (e) {
+      // Fallback for older environments
+      setFormattedCount(count.toLocaleString());
+    }
+  }, [count]);
+
+  return (
+    <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 text-white bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full">
+      <Eye className="h-5 w-5" />
+      <span className="font-semibold text-sm">{formattedCount}</span>
+    </div>
+  );
+};
+
 
 export function VideoCard({ item, isActive }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -501,6 +527,8 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
       )}
       
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none col-start-1 row-start-1 z-10" />
+
+      <ViewCount count={item.views} />
 
       <CreatorAvatar user={item.user} />
       

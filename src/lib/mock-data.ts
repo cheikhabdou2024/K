@@ -40,6 +40,7 @@ export interface FirestorePost {
   likes: number;
   comments: number;
   shares: number;
+  views: number;
   createdAt: Timestamp;
 }
 
@@ -135,6 +136,7 @@ export const mockFeedItems: FeedItem[] = [
     likes: 12345,
     comments: 678,
     shares: 910,
+    views: 1200000,
     isLiked: true,
     createdAt: { seconds: 1672531200, nanoseconds: 0 } // Jan 1, 2023
   },
@@ -148,6 +150,7 @@ export const mockFeedItems: FeedItem[] = [
     likes: 234567,
     comments: 1234,
     shares: 5678,
+    views: 5400000,
     createdAt: { seconds: 1672531200, nanoseconds: 0 }
   },
   {
@@ -160,6 +163,7 @@ export const mockFeedItems: FeedItem[] = [
     likes: 89012,
     comments: 345,
     shares: 678,
+    views: 543000,
     isLiked: true,
     createdAt: { seconds: 1672531200, nanoseconds: 0 }
   },
@@ -173,6 +177,7 @@ export const mockFeedItems: FeedItem[] = [
     likes: 54321,
     comments: 987,
     shares: 123,
+    views: 876000,
     createdAt: { seconds: 1672531200, nanoseconds: 0 }
   },
 ];
