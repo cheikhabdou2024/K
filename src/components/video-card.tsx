@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { FeedItem } from '@/lib/mock-data';
@@ -6,7 +7,6 @@ import { Button } from './ui/button';
 import { Heart, MessageCircle, Send, Music, Play } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import { CommentSheet } from './comment-sheet';
 
 
@@ -24,12 +24,17 @@ interface VideoActionsProps {
 
 const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentSheetOpen, setIsCommentSheetOpen }: VideoActionsProps) => {
   const [formattedLikeCount, setFormattedLikeCount] = useState('');
+  const [formattedCommentCount, setFormattedCommentCount] = useState('');
+  const [formattedShareCount, setFormattedShareCount] = useState('');
+
 
   useEffect(() => {
     // This effect runs only on the client, after hydration,
     // so it's safe to use locale-specific formatting.
     setFormattedLikeCount(likeCount.toLocaleString());
-  }, [likeCount]);
+    setFormattedCommentCount(item.comments.toLocaleString());
+    setFormattedShareCount(item.shares.toLocaleString());
+  }, [likeCount, item.comments, item.shares]);
 
 
   return (
@@ -45,30 +50,27 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
         />
         <span className="text-xs">{formattedLikeCount}</span>
       </Button>
-      <Drawer open={isCommentSheetOpen} onOpenChange={setIsCommentSheetOpen} shouldScaleBackground={false}>
-        <DrawerTrigger asChild>
-           <Button
-            variant="ghost"
-            size="icon"
-            className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
-          >
-            <MessageCircle className="h-8 w-8 text-white" />
-            <span className="text-xs">{item.comments}</span>
-          </Button>
-        </DrawerTrigger>
-        <DrawerContent className="h-[60%] flex flex-col">
-            <CommentSheet 
-              commentCount={item.comments}
-            />
-        </DrawerContent>
-      </Drawer>
+       <CommentSheet
+        commentCount={item.comments}
+        open={isCommentSheetOpen}
+        onOpenChange={setIsCommentSheetOpen}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
+        >
+          <MessageCircle className="h-8 w-8 text-white" />
+          <span className="text-xs">{formattedCommentCount}</span>
+        </Button>
+      </CommentSheet>
       <Button
         variant="ghost"
         size="icon"
         className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
       >
         <Send className="h-8 w-8 text-white" />
-        <span className="text-xs">{item.shares}</span>
+        <span className="text-xs">{formattedShareCount}</span>
       </Button>
     </div>
   );
@@ -199,25 +201,22 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     const end = { x: e.clientX, y: e.clientY };
     pointerStartRef.current = null;
 
-    const deltaX = end.x - start.x;
+    const deltaX = Math.abs(end.x - start.x);
     const deltaY = end.y - start.y;
 
-    const swipeThreshold = 40; // Reduced for easier activation
-    const tapThreshold = 10;
-
-    // Check for a swipe up - requires a more vertical swipe now
-    if (deltaY < -swipeThreshold && Math.abs(deltaX) < 30) {
-      setIsCommentSheetOpen(true);
-      // Cancel any pending single-tap action (play/pause)
-      if (tapTimeout.current) {
-        clearTimeout(tapTimeout.current);
-        tapTimeout.current = null;
-      }
-      return;
+    // A valid swipe up must be primarily vertical.
+    if (deltaY < -40 && deltaX < 30) {
+        setIsCommentSheetOpen(true);
+        // Cancel any pending single-tap action (play/pause).
+        if (tapTimeout.current) {
+            clearTimeout(tapTimeout.current);
+            tapTimeout.current = null;
+        }
+        return;
     }
-
+    
     // Check if it's a tap (minimal movement)
-    if (Math.abs(deltaX) < tapThreshold && Math.abs(deltaY) < tapThreshold) {
+    if (deltaX < 10 && Math.abs(deltaY) < 10) {
       handleTap();
     }
   };
