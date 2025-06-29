@@ -1,25 +1,15 @@
 
 'use server';
 
-import { aiContentScan, AiContentScanOutput } from '@/ai/flows/ai-content-scanning';
+import { AiContentScanOutput } from '@/ai/flows/ai-content-scanning';
 import { speechToText, SpeechToTextOutput } from '@/ai/flows/ai-speech-to-text-flow';
 
 export async function scanCommentAction(
   content: string
 ): Promise<AiContentScanOutput> {
-  if (!content.trim()) {
-    return { isSafe: true };
-  }
-  
-  try {
-    const result = await aiContentScan({ content, contentType: 'text' });
-    return result;
-  } catch (error) {
-    console.error('Error during AI content scan:', error);
-    // In case of an error, default to safe to not block users unnecessarily.
-    // A more robust system might have different fallback logic.
-    return { isSafe: true };
-  }
+  // Bypassing content scan for now, as requested.
+  // We will re-implement this feature later.
+  return { isSafe: true };
 }
 
 export async function transcribeAudioAction(
