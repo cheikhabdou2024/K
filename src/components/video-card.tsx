@@ -20,9 +20,10 @@ interface VideoActionsProps {
   handleLikeClick: (e: React.MouseEvent) => void;
   isCommentSheetOpen: boolean;
   setIsCommentSheetOpen: (open: boolean) => void;
+  videoOwnerId: string;
 }
 
-const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentSheetOpen, setIsCommentSheetOpen }: VideoActionsProps) => {
+const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentSheetOpen, setIsCommentSheetOpen, videoOwnerId }: VideoActionsProps) => {
   const [formattedLikeCount, setFormattedLikeCount] = useState('');
   const [formattedCommentCount, setFormattedCommentCount] = useState('');
   const [formattedShareCount, setFormattedShareCount] = useState('');
@@ -54,6 +55,7 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
         commentCount={item.comments}
         open={isCommentSheetOpen}
         onOpenChange={setIsCommentSheetOpen}
+        videoOwnerId={videoOwnerId}
       >
         <Button
           variant="ghost"
@@ -276,6 +278,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         handleLikeClick={handleLikeClick}
         isCommentSheetOpen={isCommentSheetOpen}
         setIsCommentSheetOpen={setIsCommentSheetOpen}
+        videoOwnerId={item.user.id}
       />
     </div>
   );

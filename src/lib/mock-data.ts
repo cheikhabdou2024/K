@@ -6,6 +6,7 @@ export interface User {
   name: string;
   username: string;
   avatarUrl: string;
+  isVerified?: boolean;
 }
 
 export interface FirestoreUser extends User {
@@ -73,9 +74,9 @@ export interface Chat {
 }
 
 const users: User[] = [
-  { id: 'user-1', name: 'Jane Doe', username: 'janedoe', avatarUrl: 'https://placehold.co/100x100.png' },
+  { id: 'user-1', name: 'Jane Doe', username: 'janedoe', avatarUrl: 'https://placehold.co/100x100.png', isVerified: true },
   { id: 'user-2', name: 'John Smith', username: 'johnsmith', avatarUrl: 'https://placehold.co/100x100.png' },
-  { id: 'user-3', name: 'Alex Ray', username: 'alexray', avatarUrl: 'https://placehold.co/100x100.png' },
+  { id: 'user-3', name: 'Alex Ray', username: 'alexray', avatarUrl: 'https://placehold.co/100x100.png', isVerified: true },
   { id: 'user-4', name: 'Mia Wong', username: 'miawong', avatarUrl: 'https://placehold.co/100x100.png' },
 ];
 
@@ -85,6 +86,7 @@ export const mockMe: FirestoreUser = {
   username: 'janedoe',
   email: 'jane.doe@example.com',
   avatarUrl: 'https://placehold.co/100x100.png',
+  isVerified: true,
   bio: 'Just a girl who loves to create and share videos! Follow for daily fun. 💃',
   stats: {
     following: 120,

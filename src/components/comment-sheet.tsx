@@ -9,7 +9,7 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { Button } from './ui/button';
-import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark } from 'lucide-react';
+import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark, Crown, CheckCircle2 } from 'lucide-react';
 import { mockComments, mockMe, type Comment as CommentType } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
@@ -102,7 +102,7 @@ const AudioPlayer = ({ audioUrl }: { audioUrl: string }) => {
 };
 
 
-const CommentItem = ({ comment, onReply }: { comment: CommentType; onReply: (comment: CommentType) => void }) => {
+const CommentItem = ({ comment, onReply, videoOwnerId }: { comment: CommentType; onReply: (comment: CommentType) => void; videoOwnerId: string; }) => {
   const [reaction, setReaction] = useState<string | null>(null);
   const [likeCount, setLikeCount] = useState(comment.likes);
   const [isPickerOpen, setPickerOpen] = useState(false);
@@ -113,6 +113,7 @@ const CommentItem = ({ comment, onReply }: { comment: CommentType; onReply: (com
   const { toast } = useToast();
 
   const reactions = ['❤️', '😂', '🔥', '😮', '👍'];
+  const isCreator = videoOwnerId === comment.user.id;
   
   const handleBookmark = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -165,7 +166,15 @@ const CommentItem = ({ comment, onReply }: { comment: CommentType; onReply: (com
         <AvatarFallback>{comment.user.name.charAt(0)}</AvatarFallback>
       </Avatar>
       <div className="flex-1">
-        <p className="text-xs text-muted-foreground">@{comment.user.username}</p>
+        <div className="flex items-center gap-1.5">
+            <p className="text-xs text-muted-foreground">@{comment.user.username}</p>
+            {isCreator && (
+                <Crown className="h-3.5 w-3.5 text-yellow-500 fill-yellow-400" />
+            )}
+            {comment.user.isVerified && !isCreator && (
+                <CheckCircle2 className="h-3.5 w-3.5 text-sky-500 fill-sky-400" />
+            )}
+        </div>
         <div className="text-sm bg-muted p-3 rounded-xl rounded-tl-none w-fit max-w-full">
             {comment.replyTo && (
                 <p className="text-xs font-semibold text-muted-foreground mb-1.5">
@@ -239,11 +248,13 @@ export function CommentSheet({
   children,
   open,
   onOpenChange,
+  videoOwnerId,
 }: {
   commentCount: number;
   children: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  videoOwnerId: string;
 }) {
   const { toast } = useToast();
   const [comments, setComments] = useState(mockComments);
@@ -420,7 +431,7 @@ export function CommentSheet({
         <ScrollArea className="flex-1 my-2">
           <div className="space-y-6 p-4">
             {comments.map((comment) => (
-              <CommentItem key={comment.id} comment={comment} onReply={setReplyingTo} />
+              <CommentItem key={comment.id} comment={comment} onReply={setReplyingTo} videoOwnerId={videoOwnerId} />
             ))}
           </div>
         </ScrollArea>
@@ -478,5 +489,3 @@ export function CommentSheet({
     </Drawer>
   );
 }
-
-    
