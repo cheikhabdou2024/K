@@ -654,7 +654,7 @@ export function CommentSheet({
                                 <Smile className="h-5 w-5" />
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-80 h-96 p-0 mb-2">
+                        <PopoverContent className="w-80 h-96 p-0 mb-2 z-[100]">
                             <ScrollArea className="h-full">
                                 <div className="p-2">
                                 {emojiCategories.map(category => (
