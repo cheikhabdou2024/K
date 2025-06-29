@@ -18,6 +18,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { scanCommentAction } from '@/app/comments/actions';
 import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
 const AudioPlayer = ({ audioUrl }: { audioUrl: string }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -102,12 +103,46 @@ const AudioPlayer = ({ audioUrl }: { audioUrl: string }) => {
 
 
 const CommentItem = ({ comment, onReply }: { comment: CommentType; onReply: (comment: CommentType) => void }) => {
-  const [isLiked, setIsLiked] = useState(false);
+  const [reaction, setReaction] = useState<string | null>(null);
   const [likeCount, setLikeCount] = useState(comment.likes);
+  const [isPickerOpen, setPickerOpen] = useState(false);
+  const longPressTimer = useRef<NodeJS.Timeout>();
+  const isLongPress = useRef(false);
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikeCount(count => count + (!isLiked ? 1 : -1));
+  const reactions = ['❤️', '😂', '🔥', '😮', '👍'];
+
+  const handleReactionSelect = (newReaction: string) => {
+    if (reaction === newReaction) {
+      // Un-reacting
+      setReaction(null);
+      setLikeCount(l => l - 1);
+    } else if (reaction) {
+      // Changing reaction, like count stays the same
+      setReaction(newReaction);
+    } else {
+      // First time reacting
+      setReaction(newReaction);
+      setLikeCount(l => l + 1);
+    }
+    setPickerOpen(false);
+  };
+
+  const handlePointerDown = () => {
+    isLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      isLongPress.current = true;
+      setPickerOpen(true);
+    }, 500);
+  };
+
+  const handlePointerUp = () => {
+    clearTimeout(longPressTimer.current);
+  };
+
+  const handleClick = () => {
+    if (!isLongPress.current) {
+      handleReactionSelect('❤️'); // Default to a heart on short click
+    }
   };
 
   return (
@@ -133,21 +168,32 @@ const CommentItem = ({ comment, onReply }: { comment: CommentType; onReply: (com
         </div>
       </div>
       <div className="flex flex-col items-center gap-0.5">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 transition-transform active:scale-125"
-          onClick={handleLike}
-        >
-          <Heart
-            className={cn(
-              'h-4 w-4 transition-colors',
-              isLiked
-                ? 'fill-red-500 text-red-500'
-                : 'text-muted-foreground'
-            )}
-          />
-        </Button>
+        <Popover open={isPickerOpen} onOpenChange={setPickerOpen}>
+            <PopoverTrigger asChild>
+                <button
+                    onPointerDown={handlePointerDown}
+                    onPointerUp={handlePointerUp}
+                    onClick={handleClick}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="h-8 w-8 flex items-center justify-center rounded-full transition-transform active:scale-125 focus:outline-none"
+                >
+                    {reaction ? (
+                        <span className="text-xl transform transition-transform hover:scale-125">{reaction}</span>
+                    ) : (
+                        <Heart className={cn('h-4 w-4 text-muted-foreground')} />
+                    )}
+                </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-1 rounded-full bg-background/80 backdrop-blur-sm border-border shadow-lg">
+                <div className="flex gap-1">
+                    {reactions.map(r => (
+                        <button key={r} onClick={() => handleReactionSelect(r)} className="p-1.5 rounded-full hover:bg-muted text-xl transition-transform hover:scale-125 focus:outline-none">
+                            {r}
+                        </button>
+                    ))}
+                </div>
+            </PopoverContent>
+        </Popover>
         <span className="text-xs text-muted-foreground">{likeCount > 0 ? likeCount.toLocaleString() : ''}</span>
       </div>
     </div>
@@ -416,3 +462,5 @@ export function CommentSheet({
     </Drawer>
   );
 }
+
+    
