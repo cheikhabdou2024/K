@@ -55,7 +55,7 @@ export interface Comment {
   user: User;
   text?: string;
   audioUrl?: string;
-  timestamp: string;
+  createdAt: Date;
   likes: number;
   replyTo?: User;
   parentId?: string;
@@ -181,10 +181,10 @@ export const mockSoundLibrary: Sound[] = [
 ];
 
 export const mockComments: Comment[] = [
-    { id: 'comment-1', user: users[2], text: "Wow, this looks **amazing**!", timestamp: "2h ago", likes: 125 },
-    { id: 'comment-2', user: users[3], text: "Great content, _keep it up_!", timestamp: "1h ago", likes: 88 },
-    { id: 'comment-3', user: users[1], text: "Love this! So creative.", timestamp: "30m ago", likes: 231 },
-    { id: 'comment-4', user: users[0], text: "This is my ~~least~~ favorite so far!", timestamp: "15m ago", likes: 45, replyTo: users[1], parentId: 'comment-3' },
+    { id: 'comment-1', user: users[2], text: "Wow, this looks **amazing**!", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2), likes: 125 },
+    { id: 'comment-2', user: users[3], text: "Great content, _keep it up_!", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 1), likes: 88 },
+    { id: 'comment-3', user: users[1], text: "Love this! So creative.", createdAt: new Date(Date.now() - 1000 * 60 * 30), likes: 231 },
+    { id: 'comment-4', user: users[0], text: "This is my ~~least~~ favorite so far!", createdAt: new Date(Date.now() - 1000 * 60 * 15), likes: 45, replyTo: users[1], parentId: 'comment-3' },
 ];
 
 export const mockStories: Story[] = users.slice(1).map((user, index) => ({

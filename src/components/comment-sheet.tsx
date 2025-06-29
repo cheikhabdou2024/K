@@ -21,6 +21,8 @@ import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { formatDistanceToNow } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const blobToDataUri = (blob: Blob) =>
   new Promise<string>((resolve, reject) => {
@@ -215,7 +217,7 @@ const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, i
             )}
         </div>
         <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground px-2">
-          <span>{comment.timestamp}</span>
+          <span>{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}</span>
           <button className="font-semibold hover:underline" onClick={() => onReply(comment)}>Reply</button>
         </div>
       </div>
@@ -298,6 +300,7 @@ export function CommentSheet({
   const [replyingTo, setReplyingTo] = useState<CommentType | null>(null);
   const [pinnedCommentId, setPinnedCommentId] = useState<string | null>(null);
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState('newest');
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -308,9 +311,8 @@ export function CommentSheet({
   const audioChunksRef = useRef<Blob[]>([]);
 
   const commentThreads = useMemo(() => {
-    const commentMap = new Map();
-    const threads: CommentType[] = [];
     const repliesMap = new Map<string, CommentType[]>();
+    const threads: CommentType[] = [];
 
     comments.forEach(comment => {
         if (comment.parentId) {
@@ -323,9 +325,21 @@ export function CommentSheet({
         }
     });
 
-    const populatedThreads = threads.map(thread => ({
+    const sortedThreads = [...threads].sort((a, b) => {
+      switch (sortBy) {
+        case 'top':
+          return b.likes - a.likes;
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'newest':
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+
+    const populatedThreads = sortedThreads.map(thread => ({
         ...thread,
-        replies: repliesMap.get(thread.id) || [],
+        replies: (repliesMap.get(thread.id) || []).sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
     }));
     
     // Pinning logic
@@ -338,7 +352,7 @@ export function CommentSheet({
         return [pinnedThread, ...otherThreads];
     }
     return populatedThreads;
-  }, [comments, pinnedCommentId]);
+  }, [comments, pinnedCommentId, sortBy]);
 
   const handlePinComment = (commentId: string) => {
     if (!commentThreads.some(thread => thread.id === commentId && !thread.parentId)) {
@@ -469,10 +483,23 @@ export function CommentSheet({
     if(!audioUrl) setIsSending(true);
 
     try {
+      const scanResult = await scanCommentAction(contentToScan);
+
+      if (!scanResult.isSafe) {
+        toast({
+          variant: 'destructive',
+          title: 'Comment Blocked',
+          description: scanResult.reason || 'This comment violates our community guidelines.',
+        });
+        setIsSending(false);
+        cleanupRecording();
+        return;
+      }
+
       const newComment: CommentType = {
         id: `comment-${Date.now()}`,
         user: mockMe,
-        timestamp: 'Just now',
+        createdAt: new Date(),
         likes: 0,
         ...(text && { text }),
         ...(audioUrl && { audioUrl }),
@@ -518,7 +545,21 @@ export function CommentSheet({
         onClick={(e) => e.stopPropagation()}
       >
         <DrawerHeader className="text-center p-4 pb-2">
-            <DrawerTitle>{comments.length.toLocaleString()} Comments</DrawerTitle>
+            <div className="relative">
+              <DrawerTitle>{comments.length.toLocaleString()} Comments</DrawerTitle>
+              <div className="absolute -top-1 right-0">
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="w-[120px] h-9 text-xs" aria-label="Sort comments by">
+                          <SelectValue placeholder="Sort by..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="newest">Newest</SelectItem>
+                          <SelectItem value="top">Top</SelectItem>
+                          <SelectItem value="oldest">Oldest</SelectItem>
+                      </SelectContent>
+                  </Select>
+              </div>
+            </div>
         </DrawerHeader>
         <ScrollArea className="flex-1 my-2">
             <div className="space-y-4 p-4">
