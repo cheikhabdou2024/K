@@ -41,9 +41,9 @@ export async function aiContentScan(input: AiContentScanInput): Promise<AiConten
 
 const safetyConfig = {
   safetySettings: [
-    {category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH'},
+    {category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE'},
     {category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE'},
-    {category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE'},
+    {category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_LOW_AND_ABOVE'},
     {category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE'},
     {category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_ONLY_HIGH'},
   ],
@@ -88,10 +88,18 @@ const aiContentScanFlow = ai.defineFlow(
   async input => {
     if (input.contentType === 'text') {
       const {output} = await aiTextScanPrompt({ content: input.content });
-      return output!;
+      // If the model's safety settings are triggered, the output will be null.
+      // We must handle this case to ensure we correctly flag the content as unsafe.
+      if (!output) {
+          return { isSafe: false, reason: "This comment violates our community guidelines for harassment or hate speech." };
+      }
+      return output;
     } else {
       const {output} = await aiNonTextScanPrompt({ content: input.content });
-      return output!;
+       if (!output) {
+          return { isSafe: false, reason: "This content violates our community guidelines." };
+      }
+      return output;
     }
   }
 );
