@@ -56,6 +56,7 @@ export interface Comment {
   audioUrl?: string;
   timestamp: string;
   likes: number;
+  replyTo?: User;
 }
 
 export interface Story {
@@ -179,7 +180,7 @@ export const mockComments: Comment[] = [
     { id: 'comment-1', user: users[2], text: "Wow, this looks amazing!", timestamp: "2h ago", likes: 125 },
     { id: 'comment-2', user: users[3], text: "Great content, keep it up!", timestamp: "1h ago", likes: 88 },
     { id: 'comment-3', user: users[1], text: "Love this! So creative.", timestamp: "30m ago", likes: 231 },
-    { id: 'comment-4', user: users[0], text: "This is my favorite so far!", timestamp: "15m ago", likes: 45 },
+    { id: 'comment-4', user: users[0], text: "This is my favorite so far!", timestamp: "15m ago", likes: 45, replyTo: users[1] },
 ];
 
 export const mockStories: Story[] = users.slice(1).map((user, index) => ({

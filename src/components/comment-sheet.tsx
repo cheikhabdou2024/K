@@ -100,7 +100,7 @@ const AudioPlayer = ({ audioUrl }: { audioUrl: string }) => {
 };
 
 
-const CommentItem = ({ comment }: { comment: CommentType }) => {
+const CommentItem = ({ comment, onReply }: { comment: CommentType; onReply: (comment: CommentType) => void }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(comment.likes);
 
@@ -118,12 +118,17 @@ const CommentItem = ({ comment }: { comment: CommentType }) => {
       <div className="flex-1">
         <p className="text-xs text-muted-foreground">@{comment.user.username}</p>
         <div className="text-sm bg-muted p-3 rounded-xl rounded-tl-none w-fit max-w-full">
+            {comment.replyTo && (
+                <p className="text-xs font-semibold text-muted-foreground mb-1.5">
+                    Replying to <span className="text-primary hover:underline cursor-pointer">@{comment.replyTo.username}</span>
+                </p>
+            )}
             {comment.text && <p>{comment.text}</p>}
             {comment.audioUrl && <AudioPlayer audioUrl={comment.audioUrl} />}
         </div>
         <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground px-2">
           <span>{comment.timestamp}</span>
-          <button className="font-semibold hover:underline">Reply</button>
+          <button className="font-semibold hover:underline" onClick={() => onReply(comment)}>Reply</button>
         </div>
       </div>
       <div className="flex flex-col items-center gap-0.5">
@@ -165,6 +170,7 @@ export function CommentSheet({
   const [comments, setComments] = useState(mockComments);
   const [isSending, setIsSending] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [replyingTo, setReplyingTo] = useState<CommentType | null>(null);
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -265,9 +271,11 @@ export function CommentSheet({
           likes: 0,
           ...(text && { text }),
           ...(audioUrl && { audioUrl }),
+          ...(replyingTo && { replyTo: replyingTo.user }),
         };
         setComments(prev => [newComment, ...prev]);
         setCommentText('');
+        setReplyingTo(null);
       } else {
         toast({
           variant: 'destructive',
@@ -303,12 +311,20 @@ export function CommentSheet({
         <ScrollArea className="flex-1 my-2">
           <div className="space-y-6 px-4">
             {comments.map((comment) => (
-              <CommentItem key={comment.id} comment={comment} />
+              <CommentItem key={comment.id} comment={comment} onReply={setReplyingTo} />
             ))}
           </div>
         </ScrollArea>
         <Separator />
         <div className="p-4 bg-background">
+          {replyingTo && (
+            <div className="px-2 pb-2 text-sm text-muted-foreground flex justify-between items-center">
+              <span>Replying to @{replyingTo.user.username}</span>
+              <Button variant="ghost" size="icon" className="h-6 w-auto px-2 text-xs" onClick={() => setReplyingTo(null)}>
+                Cancel
+              </Button>
+            </div>
+          )}
           {isRecording ? (
             <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon" onClick={handleCancelRecording} className="text-destructive hover:bg-destructive/10 rounded-full">
