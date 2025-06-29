@@ -348,7 +348,7 @@ export function CommentSheet({
         }
         case 'newest':
         default:
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return new Date(b.createdAt).getTime() - new Date(b.createdAt).getTime();
       }
     });
 
