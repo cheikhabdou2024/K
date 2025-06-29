@@ -103,6 +103,11 @@ interface VideoCardProps {
   isActive: boolean;
 }
 
+// Helper functions for gesture calculations
+const getDistance = (p1: {x:number, y:number}, p2: {x:number, y:number}) => {
+  return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+};
+
 export function VideoCard({ item, isActive }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -119,6 +124,14 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
 
   const [videoProgress, setVideoProgress] = useState(0);
 
+  // State and refs for pinch-to-zoom
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const pointersRef = useRef(new Map());
+  const initialPinchDistanceRef = useRef(0);
+  const wasGestureActiveRef = useRef(false);
+  const lastScaleRef = useRef(1);
+
   useEffect(() => {
     if (videoRef.current) {
       if (isActive) {
@@ -129,6 +142,9 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         videoRef.current.currentTime = 0;
         setIsPlaying(false);
         setIsCommentSheetOpen(false);
+        // Reset zoom when video becomes inactive
+        setScale(1);
+        setPosition({ x: 0, y: 0 });
       }
     }
 
@@ -197,7 +213,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     const newIsLiked = !isLiked;
     setIsLiked(newIsLiked);
     setLikeCount(count => count + (newIsLiked ? 1 : -1));
-    // In a real app, you would call an API here to persist the like.
   };
   
   const triggerDoubleTapLike = () => {
@@ -215,32 +230,84 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   };
   
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (!e.isPrimary) return;
-    pointerStartRef.current = { x: e.clientX, y: e.clientY };
+    wasGestureActiveRef.current = false;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    
+    if (pointersRef.current.size === 1) {
+        pointerStartRef.current = { x: e.clientX, y: e.clientY };
+    }
+    
+    if (pointersRef.current.size === 2) {
+        if (tapTimeout.current) clearTimeout(tapTimeout.current);
+        const points = Array.from(pointersRef.current.values());
+        initialPinchDistanceRef.current = getDistance(points[0] as any, points[1] as any);
+        lastScaleRef.current = scale;
+    }
   };
 
-  const handlePointerUp = (e: React.PointerEvent) => {
-    if (!e.isPrimary || !pointerStartRef.current) return;
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!pointersRef.current.has(e.pointerId)) return;
+
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     
-    const start = pointerStartRef.current;
-    const end = { x: e.clientX, y: e.clientY };
-    pointerStartRef.current = null;
+    if (pointersRef.current.size === 2) {
+        wasGestureActiveRef.current = true;
+        const points = Array.from(pointersRef.current.values());
+        const currentDistance = getDistance(points[0] as any, points[1] as any);
+        const newScale = Math.max(1, Math.min(lastScaleRef.current * (currentDistance / initialPinchDistanceRef.current), 4));
+        setScale(newScale);
+    } else if (pointersRef.current.size === 1 && scale > 1) {
+        wasGestureActiveRef.current = true;
+        if (!pointerStartRef.current) return;
+        const currentPos = { x: e.clientX, y: e.clientY };
+        const deltaX = currentPos.x - pointerStartRef.current.x;
+        const deltaY = currentPos.y - pointerStartRef.current.y;
 
-    const deltaX = Math.abs(end.x - start.x);
-    const deltaY = end.y - start.y;
+        const videoElement = videoRef.current;
+        if (!videoElement) return;
 
-    // Detect a swipe up to open comments
-    if (deltaY < -40 && deltaX < 30) {
-        setIsCommentSheetOpen(true);
-        if (tapTimeout.current) {
-            clearTimeout(tapTimeout.current);
-            tapTimeout.current = null;
+        const rect = videoElement.getBoundingClientRect();
+        const maxPosX = Math.max(0, (rect.width * scale - rect.width) / 2);
+        const maxPosY = Math.max(0, (rect.height * scale - rect.height) / 2);
+        
+        const newX = Math.max(-maxPosX, Math.min(maxPosX, position.x + deltaX));
+        const newY = Math.max(-maxPosY, Math.min(maxPosY, position.y + deltaY));
+
+        setPosition({ x: newX, y: newY });
+        pointerStartRef.current = currentPos;
+    }
+  };
+  
+  const handlePointerUp = (e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId);
+
+    if (wasGestureActiveRef.current) {
+        if (scale < 1.05) {
+            setScale(1);
+            setPosition({ x: 0, y: 0 });
+        }
+        lastScaleRef.current = scale;
+        if(pointersRef.current.size < 2) {
+            initialPinchDistanceRef.current = 0;
+        }
+        if (pointersRef.current.size === 1) {
+            const remainingPointer = Array.from(pointersRef.current.values())[0] as any;
+            pointerStartRef.current = { x: remainingPointer.x, y: remainingPointer.y };
+        } else if(pointersRef.current.size < 1) {
+             pointerStartRef.current = null;
         }
         return;
     }
     
-    // Detect tap/double tap
-    if (deltaX < 10 && Math.abs(deltaY) < 10) {
+    if (!pointerStartRef.current) return;
+    
+    const start = pointerStartRef.current;
+    const end = { x: e.clientX, y: e.clientY };
+    const deltaX = Math.abs(end.x - start.x);
+    const deltaY = end.y - start.y;
+    const moveDistance = Math.sqrt(deltaX*deltaX + (end.y-start.y)*(end.y-start.y));
+
+    if (moveDistance < 10) {
       if (tapTimeout.current) {
         clearTimeout(tapTimeout.current);
         tapTimeout.current = null;
@@ -251,23 +318,37 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
           tapTimeout.current = null;
         }, 300);
       }
+    } else if (deltaY < -40 && deltaX < 30) {
+        setIsCommentSheetOpen(true);
+        if (tapTimeout.current) {
+            clearTimeout(tapTimeout.current);
+            tapTimeout.current = null;
+        }
     }
+    
+    pointerStartRef.current = null;
   };
   
   return (
     <div 
-        className="w-full h-full relative bg-black grid place-items-center cursor-pointer"
+        className="w-full h-full relative bg-black grid place-items-center cursor-pointer touch-none overflow-hidden"
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
+        onPointerMove={handlePointerMove}
+        onPointerCancel={handlePointerUp}
     >
       <video
         ref={videoRef}
         src={item.videoUrl}
         loop
         playsInline
-        className="w-full h-full object-cover col-start-1 row-start-1"
+        className="w-full h-full object-cover col-start-1 row-start-1 transition-transform duration-100 ease-out"
         poster={item.thumbnailUrl}
         data-ai-hint="short form video"
+        style={{
+            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+            transformOrigin: 'center'
+        }}
       />
 
       {showHeart && (
