@@ -1,10 +1,10 @@
 
 'use client';
 
-import type { FeedItem } from '@/lib/mock-data';
+import type { FeedItem, User } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
-import { Heart, MessageCircle, Send, Music, Play, Settings } from 'lucide-react';
+import { Heart, MessageCircle, Send, Play, Settings, Plus } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { CommentSheet } from './comment-sheet';
@@ -113,23 +113,28 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
 };
 
 
-const VideoInfo = ({ item }: { item: FeedItem }) => (
-  <div className="absolute bottom-4 left-4 right-4 text-white z-10" onClick={(e) => e.stopPropagation()}>
-    <div className="flex items-center gap-2">
-      <Avatar className="w-10 h-10 border-2 border-white">
-        <AvatarImage src={item.user.avatarUrl} />
-        <AvatarFallback>{item.user.name.charAt(0)}</AvatarFallback>
+const CreatorAvatar = ({ user }: { user: User }) => (
+  <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10">
+    <div className="relative">
+      <Avatar className="w-12 h-12 border-2 border-white shadow-lg">
+        <AvatarImage src={user.avatarUrl} alt={user.name} />
+        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
       </Avatar>
-      <p className="font-bold text-lg">@{item.user.username}</p>
-      <Button variant="outline" className="text-primary border-primary h-8 ml-2 bg-transparent backdrop-blur-sm">Follow</Button>
-    </div>
-    <p className="mt-2 text-sm">{item.caption}</p>
-    <div className="flex items-center gap-2 mt-2">
-      <Music className="h-4 w-4" />
-      <p className="text-sm font-semibold">{item.sound.title}</p>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          // In a real app, you would handle the follow logic here.
+          console.log(`Following user: ${user.username}`);
+        }}
+        className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-6 w-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center border-2 border-black focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-black"
+        aria-label="Follow creator"
+      >
+        <Plus className="h-4 w-4" />
+      </button>
     </div>
   </div>
 );
+
 
 interface VideoCardProps {
   item: FeedItem;
@@ -496,7 +501,9 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
       )}
       
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none col-start-1 row-start-1 z-10" />
-      <VideoInfo item={item} />
+
+      <CreatorAvatar user={item.user} />
+      
       <VideoActions 
           item={item} 
           isLiked={isLiked} 
