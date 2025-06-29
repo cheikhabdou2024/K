@@ -110,7 +110,7 @@ const CommentItem = ({ comment, onReply }: { comment: CommentType; onReply: (com
   };
 
   return (
-    <div className="flex items-start gap-3 pr-4">
+    <div className={cn("flex items-start gap-3 pr-4", { "ml-8": comment.replyTo })}>
       <Avatar className="h-8 w-8">
         <AvatarImage src={comment.user.avatarUrl} />
         <AvatarFallback>{comment.user.name.charAt(0)}</AvatarFallback>
@@ -273,7 +273,34 @@ export function CommentSheet({
           ...(audioUrl && { audioUrl }),
           ...(replyingTo && { replyTo: replyingTo.user }),
         };
-        setComments(prev => [newComment, ...prev]);
+
+        if (replyingTo) {
+          setComments(prev => {
+            const newComments = [...prev];
+            const directParentIndex = newComments.findIndex(c => c.id === replyingTo.id);
+
+            if (directParentIndex === -1) {
+              return [newComment, ...prev]; // Fallback if parent disappears
+            }
+
+            // Find the last comment in the thread following the parent
+            let lastInThreadIndex = directParentIndex;
+            for (let i = directParentIndex + 1; i < newComments.length; i++) {
+              if (newComments[i].replyTo) {
+                lastInThreadIndex = i;
+              } else {
+                // Reached the next top-level comment
+                break;
+              }
+            }
+
+            newComments.splice(lastInThreadIndex + 1, 0, newComment);
+            return newComments;
+          });
+        } else {
+          setComments(prev => [newComment, ...prev]);
+        }
+        
         setCommentText('');
         setReplyingTo(null);
       } else {
