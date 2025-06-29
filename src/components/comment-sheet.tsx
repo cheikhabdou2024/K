@@ -9,7 +9,7 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { Button } from './ui/button';
-import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark, Crown, CheckCircle2, Pin } from 'lucide-react';
+import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark, Crown, CheckCircle2, Pin, MessageSquareReply, ChevronDown } from 'lucide-react';
 import { mockComments, mockMe, type Comment as CommentType } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
@@ -170,7 +170,7 @@ const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, i
   };
 
   return (
-    <div className={cn("flex items-start gap-3 pr-4", { "ml-8": comment.replyTo })}>
+    <div className={cn("flex items-start gap-3 pr-4", { "ml-8": !!comment.parentId })}>
       <Avatar className="h-8 w-8">
         <AvatarImage src={comment.user.avatarUrl} />
         <AvatarFallback>{comment.user.name.charAt(0)}</AvatarFallback>
@@ -243,7 +243,7 @@ const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, i
         <button onClick={handleBookmark} className="h-8 w-8 flex items-center justify-center rounded-full mt-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Bookmark className={cn('h-4 w-4 text-muted-foreground transition-colors', isBookmarked && 'fill-primary text-primary')} />
         </button>
-         {isViewingUserCreator && (
+         {isViewingUserCreator && !comment.parentId && (
             <button onClick={() => onPinComment(comment.id)} className="h-8 w-8 flex items-center justify-center rounded-full mt-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <Pin className={cn('h-4 w-4 text-muted-foreground transition-colors', isPinned && 'fill-primary text-primary')} />
             </button>
@@ -290,6 +290,7 @@ export function CommentSheet({
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<CommentType | null>(null);
   const [pinnedCommentId, setPinnedCommentId] = useState<string | null>(null);
+  const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -299,12 +300,29 @@ export function CommentSheet({
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  const sortedComments = useMemo(() => {
-    if (!pinnedCommentId) return comments;
-    const pinnedComment = comments.find(c => c.id === pinnedCommentId);
-    if (!pinnedComment) return comments;
-    const otherComments = comments.filter(c => c.id !== pinnedCommentId);
-    return [pinnedComment, ...otherComments];
+  const commentThreads = useMemo(() => {
+    const commentMap = new Map();
+    comments.forEach(comment => commentMap.set(comment.id, { ...comment, replies: [] }));
+
+    const threads = [];
+    commentMap.forEach(comment => {
+        if (comment.parentId && commentMap.has(comment.parentId)) {
+            commentMap.get(comment.parentId).replies.push(comment);
+        } else {
+            threads.push(comment);
+        }
+    });
+
+    // Pinning logic
+    if (!pinnedCommentId) return threads;
+    
+    const pinnedThreadIndex = threads.findIndex(t => t.id === pinnedCommentId);
+    if (pinnedThreadIndex > -1) {
+        const pinnedThread = threads[pinnedThreadIndex];
+        const otherThreads = threads.filter(t => t.id !== pinnedCommentId);
+        return [pinnedThread, ...otherThreads];
+    }
+    return threads;
   }, [comments, pinnedCommentId]);
 
   const handlePinComment = (commentId: string) => {
@@ -315,6 +333,18 @@ export function CommentSheet({
             description: newPinnedId ? 'This comment will now appear at the top.' : undefined,
         });
         return newPinnedId;
+    });
+  };
+  
+  const toggleReplies = (threadId: string) => {
+    setExpandedThreads(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(threadId)) {
+            newSet.delete(threadId);
+        } else {
+            newSet.add(threadId);
+        }
+        return newSet;
     });
   };
 
@@ -427,33 +457,10 @@ export function CommentSheet({
           likes: 0,
           ...(text && { text }),
           ...(audioUrl && { audioUrl }),
-          ...(replyingTo && { replyTo: replyingTo.user }),
+          ...(replyingTo && { replyTo: replyingTo.user, parentId: replyingTo.id }),
         };
-
-        if (replyingTo) {
-          setComments(prev => {
-            const newComments = [...prev];
-            const directParentIndex = newComments.findIndex(c => c.id === replyingTo.id);
-
-            if (directParentIndex === -1) {
-              return [newComment, ...prev]; // Fallback if parent disappears
-            }
-
-            let lastInThreadIndex = directParentIndex;
-            for (let i = directParentIndex + 1; i < newComments.length; i++) {
-              if (newComments[i].replyTo) {
-                lastInThreadIndex = i;
-              } else {
-                break;
-              }
-            }
-
-            newComments.splice(lastInThreadIndex + 1, 0, newComment);
-            return newComments;
-          });
-        } else {
-          setComments(prev => [newComment, ...prev]);
-        }
+        
+        setComments(prev => [newComment, ...prev]);
         
         setCommentText('');
         setReplyingTo(null);
@@ -489,19 +496,46 @@ export function CommentSheet({
             <DrawerTitle>{comments.length.toLocaleString()} Comments</DrawerTitle>
         </DrawerHeader>
         <ScrollArea className="flex-1 my-2">
-          <div className="space-y-6 p-4">
-            {sortedComments.map((comment) => (
-              <CommentItem 
-                key={comment.id} 
-                comment={comment} 
-                onReply={setReplyingTo} 
-                videoOwnerId={videoOwnerId}
-                isPinned={comment.id === pinnedCommentId}
-                onPinComment={handlePinComment}
-                isViewingUserCreator={videoOwnerId === mockMe.id}
-              />
-            ))}
-          </div>
+            <div className="space-y-4 p-4">
+                {commentThreads.map((thread) => (
+                    <div key={thread.id}>
+                        <CommentItem 
+                            comment={thread}
+                            onReply={setReplyingTo}
+                            videoOwnerId={videoOwnerId}
+                            isPinned={thread.id === pinnedCommentId}
+                            onPinComment={handlePinComment}
+                            isViewingUserCreator={videoOwnerId === mockMe.id}
+                        />
+                        
+                        {thread.replies && thread.replies.length > 0 && (
+                            <div className="ml-8 pl-3 mt-2">
+                                <Button variant="ghost" size="sm" onClick={() => toggleReplies(thread.id)} className="text-muted-foreground hover:bg-muted">
+                                    <div className="w-6 h-px bg-border mr-2"></div>
+                                    {expandedThreads.has(thread.id) ? 'Hide replies' : `View ${thread.replies.length} replies`}
+                                    <ChevronDown className={cn('h-4 w-4 ml-1 transition-transform', expandedThreads.has(thread.id) && 'rotate-180')} />
+                                </Button>
+                            </div>
+                        )}
+
+                        {expandedThreads.has(thread.id) && (
+                            <div className="space-y-4 pt-4">
+                                {thread.replies.map(reply => (
+                                    <CommentItem 
+                                        key={reply.id} 
+                                        comment={reply} 
+                                        onReply={setReplyingTo}
+                                        videoOwnerId={videoOwnerId}
+                                        isPinned={false} // Replies cannot be pinned directly
+                                        onPinComment={handlePinComment}
+                                        isViewingUserCreator={videoOwnerId === mockMe.id}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
         </ScrollArea>
         <div className="p-4 bg-background border-t">
           {replyingTo && (
