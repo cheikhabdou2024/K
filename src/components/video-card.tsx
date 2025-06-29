@@ -4,7 +4,7 @@
 import type { FeedItem, User, Product } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
-import { Heart, MessageCircle, Send, Play, Settings, Plus, Eye, PictureInPicture2, ShoppingBag, Download } from 'lucide-react';
+import { Heart, MessageCircle, Send, Play, Settings, Plus, Eye, PictureInPicture2, ShoppingBag, Download, FastForward, Rewind } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { CommentSheet } from './comment-sheet';
@@ -116,13 +116,25 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
 };
 
 
-const CreatorAvatar = ({ user }: { user: User }) => (
+const CreatorAvatar = ({ user, onFollow }: { user: User, onFollow: () => void }) => (
   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
     <div className="relative">
       <Avatar className="w-12 h-12 border-2 border-white shadow-lg">
         <AvatarImage src={user.avatarUrl} alt={user.name} />
         <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
       </Avatar>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+        onClick={(e) => {
+            e.stopPropagation(); // Prevent tap-to-pause
+            onFollow();
+        }}
+        aria-label={`Follow ${user.username}`}
+      >
+        <Plus className="h-4 w-4" />
+      </Button>
     </div>
   </div>
 );
@@ -441,6 +453,11 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     setIsOptionsDialogOpen(false);
   }
 
+  const handleFollow = () => {
+    toast({ title: `Followed ${item.user.username} (Demo)` });
+    // In a real app, you would add logic to update follow state here
+  };
+
 
   return (
     <div 
@@ -474,7 +491,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
       
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none col-start-1 row-start-1 z-10" />
 
-      <CreatorAvatar user={item.user} />
+      <CreatorAvatar user={item.user} onFollow={handleFollow} />
       
       <VideoActions 
           item={item} 
@@ -582,3 +599,5 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     </div>
   );
 }
+
+    
