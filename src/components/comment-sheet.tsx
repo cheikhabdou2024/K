@@ -309,6 +309,7 @@ export function CommentSheet({
   const [replyingTo, setReplyingTo] = useState<CommentType | null>(null);
   const [pinnedCommentId, setPinnedCommentId] = useState<string | null>(null);
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
+  const [fullyExpandedThreads, setFullyExpandedThreads] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState('newest');
 
   // Audio recording state
@@ -387,6 +388,12 @@ export function CommentSheet({
         const newSet = new Set(prev);
         if (newSet.has(threadId)) {
             newSet.delete(threadId);
+            // Also collapse fully expanded view when hiding replies
+            setFullyExpandedThreads(fullPrev => {
+                const fullNewSet = new Set(fullPrev);
+                fullNewSet.delete(threadId);
+                return fullNewSet;
+            });
         } else {
             newSet.add(threadId);
         }
@@ -572,44 +579,63 @@ export function CommentSheet({
         </DrawerHeader>
         <ScrollArea className="flex-1 my-2">
             <div className="space-y-4 p-4">
-                {commentThreads.map((thread) => (
-                    <div key={thread.id}>
-                        <CommentItem 
-                            comment={thread}
-                            onReply={setReplyingTo}
-                            videoOwnerId={videoOwnerId}
-                            isPinned={thread.id === pinnedCommentId}
-                            onPinComment={handlePinComment}
-                            isViewingUserCreator={videoOwnerId === mockMe.id}
-                        />
-                        
-                        {thread.replies && thread.replies.length > 0 && (
-                            <div className="ml-8 pl-3 mt-2">
-                                <Button variant="ghost" size="sm" onClick={() => toggleReplies(thread.id)} className="text-muted-foreground hover:bg-muted">
-                                    <div className="w-6 h-px bg-border mr-2"></div>
-                                    {expandedThreads.has(thread.id) ? 'Hide replies' : `View ${thread.replies.length} replies`}
-                                    <ChevronDown className={cn('h-4 w-4 ml-1 transition-transform', expandedThreads.has(thread.id) && 'rotate-180')} />
-                                </Button>
-                            </div>
-                        )}
+                {commentThreads.map((thread) => {
+                    const REPLIES_PREVIEW_COUNT = 2;
+                    const isExpanded = expandedThreads.has(thread.id);
+                    const isFullyExpanded = fullyExpandedThreads.has(thread.id);
+                    const repliesToShow = isExpanded 
+                        ? thread.replies.slice(0, isFullyExpanded ? thread.replies.length : REPLIES_PREVIEW_COUNT)
+                        : [];
+                    const canShowMore = isExpanded && !isFullyExpanded && thread.replies.length > REPLIES_PREVIEW_COUNT;
+                    const remainingRepliesCount = thread.replies.length - REPLIES_PREVIEW_COUNT;
+                    
+                    return (
+                        <div key={thread.id}>
+                            <CommentItem 
+                                comment={thread}
+                                onReply={setReplyingTo}
+                                videoOwnerId={videoOwnerId}
+                                isPinned={thread.id === pinnedCommentId}
+                                onPinComment={handlePinComment}
+                                isViewingUserCreator={videoOwnerId === mockMe.id}
+                            />
+                            
+                            {isExpanded && thread.replies && thread.replies.length > 0 && (
+                                <div className="space-y-4 pt-4">
+                                    {repliesToShow.map(reply => (
+                                        <CommentItem 
+                                            key={reply.id} 
+                                            comment={reply} 
+                                            onReply={setReplyingTo}
+                                            videoOwnerId={videoOwnerId}
+                                            isPinned={false} // Replies cannot be pinned directly
+                                            onPinComment={handlePinComment}
+                                            isViewingUserCreator={videoOwnerId === mockMe.id}
+                                        />
+                                    ))}
+                                </div>
+                            )}
 
-                        {expandedThreads.has(thread.id) && (
-                            <div className="space-y-4 pt-4">
-                                {thread.replies.map(reply => (
-                                    <CommentItem 
-                                        key={reply.id} 
-                                        comment={reply} 
-                                        onReply={setReplyingTo}
-                                        videoOwnerId={videoOwnerId}
-                                        isPinned={false} // Replies cannot be pinned directly
-                                        onPinComment={handlePinComment}
-                                        isViewingUserCreator={videoOwnerId === mockMe.id}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                ))}
+                            {thread.replies && thread.replies.length > 0 && (
+                                <div className="ml-8 pl-3 mt-2 flex items-center gap-4">
+                                    <Button variant="ghost" size="sm" onClick={() => toggleReplies(thread.id)} className="text-muted-foreground hover:bg-muted">
+                                        <div className="w-6 h-px bg-border mr-2"></div>
+                                        {isExpanded ? 'Hide replies' : `View ${thread.replies.length} replies`}
+                                        <ChevronDown className={cn('h-4 w-4 ml-1 transition-transform', isExpanded && 'rotate-180')} />
+                                    </Button>
+
+                                    {canShowMore && (
+                                        <Button variant="ghost" size="sm" onClick={() => {
+                                            setFullyExpandedThreads(prev => new Set(prev).add(thread.id));
+                                        }} className="text-muted-foreground hover:bg-muted">
+                                            View {remainingRepliesCount} more replies
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
         </ScrollArea>
         <div className="p-4 bg-background border-t">

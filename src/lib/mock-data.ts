@@ -182,6 +182,10 @@ export const mockSoundLibrary: Sound[] = [
 
 export const mockComments: Comment[] = [
     { id: 'comment-1', user: users[2], text: "Wow, this looks **amazing**!", createdAt: new Date("2024-07-22T10:00:00Z"), likes: 125 },
+    { id: 'reply-1-1', user: users[0], text: "I agree! The colors are stunning.", createdAt: new Date("2024-07-22T10:02:00Z"), likes: 10, parentId: 'comment-1', replyTo: users[2] },
+    { id: 'reply-1-2', user: users[3], text: "Where was this taken?", createdAt: new Date("2024-07-22T10:05:00Z"), likes: 25, parentId: 'comment-1', replyTo: users[2] },
+    { id: 'reply-1-3', user: users[1], text: "Seriously, need the location ASAP!", createdAt: new Date("2024-07-22T10:08:00Z"), likes: 18, parentId: 'comment-1', replyTo: users[3] },
+    { id: 'reply-1-4', user: users[2], text: "It's from my trip to the Amalfi Coast! Highly recommend.", createdAt: new Date("2024-07-22T10:15:00Z"), likes: 50, parentId: 'comment-1', replyTo: users[3] },
     { id: 'comment-2', user: users[3], text: "Great content, _keep it up_!", createdAt: new Date("2024-07-22T11:00:00Z"), likes: 88 },
     { id: 'comment-3', user: users[1], text: "Love this! So creative.", createdAt: new Date("2024-07-22T11:30:00Z"), likes: 231 },
     { id: 'comment-4', user: users[0], text: "This is my ~~least~~ favorite so far!", createdAt: new Date("2024-07-22T11:45:00Z"), likes: 45, replyTo: users[1], parentId: 'comment-3' },
