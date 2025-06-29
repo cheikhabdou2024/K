@@ -74,7 +74,7 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
 
 
   return (
-    <div className="absolute bottom-20 right-2 flex flex-col gap-4 z-10" onClick={(e) => e.stopPropagation()}>
+    <div className="absolute bottom-20 right-2 flex flex-col gap-4 z-20" onClick={(e) => e.stopPropagation()}>
       <div className="flex flex-col items-center h-auto text-white">
         <Eye className="h-8 w-8 text-white" />
         <span className="text-xs">{formattedViewCount}</span>
@@ -119,25 +119,23 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
 
 
 const CreatorAvatar = ({ user, onFollow }: { user: User, onFollow: () => void }) => (
-  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-    <div className="relative">
-      <Avatar className="w-12 h-12 border-2 border-white shadow-lg">
-        <AvatarImage src={user.avatarUrl} alt={user.name} />
-        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-      </Avatar>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
-        onClick={(e) => {
-            e.stopPropagation(); // Prevent tap-to-pause
-            onFollow();
-        }}
-        aria-label={`Follow ${user.username}`}
-      >
-        <Plus className="h-4 w-4" />
-      </Button>
-    </div>
+  <div className="relative">
+    <Avatar className="w-12 h-12 border-2 border-white shadow-lg">
+      <AvatarImage src={user.avatarUrl} alt={user.name} />
+      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+    </Avatar>
+    <Button
+      variant="ghost"
+      size="icon"
+      className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+      onClick={(e) => {
+          e.stopPropagation(); // Prevent tap-to-pause
+          onFollow();
+      }}
+      aria-label={`Follow ${user.username}`}
+    >
+      <Plus className="h-4 w-4" />
+    </Button>
   </div>
 );
 
@@ -184,6 +182,12 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   const initialPinchDistanceRef = useRef(0);
   const wasGestureActiveRef = useRef(false);
   const lastScaleRef = useRef(1);
+
+  // Playback speed
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [showSpeed, setShowSpeed] = useState(false);
+  const speedCycleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const speedDisplayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
     // Check for Picture-in-Picture support on the client
@@ -202,6 +206,8 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
       } else {
         video.pause();
         video.currentTime = 0;
+        video.playbackRate = 1; // Reset playback speed
+        setPlaybackRate(1);
         setIsPlaying(false);
         setIsCommentSheetOpen(false);
         // Reset zoom and other states when video becomes inactive
@@ -215,6 +221,8 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
       if (tapTimeout.current) clearTimeout(tapTimeout.current);
       if (heartAnimationTimeout.current) clearTimeout(heartAnimationTimeout.current);
       if (optionsMenuTimeoutRef.current) clearTimeout(optionsMenuTimeoutRef.current);
+      if (speedCycleTimeoutRef.current) clearTimeout(speedCycleTimeoutRef.current);
+      if (speedDisplayTimeoutRef.current) clearTimeout(speedDisplayTimeoutRef.current);
     };
   }, [isActive]);
 
@@ -235,6 +243,13 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         video.removeEventListener('timeupdate', updateProgress);
     };
   }, []);
+
+  // Sync React state with video element property
+  useEffect(() => {
+    if (videoRef.current) {
+        videoRef.current.playbackRate = playbackRate;
+    }
+  }, [playbackRate]);
 
 
   useEffect(() => {
@@ -297,10 +312,36 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     wasLongPress.current = false;
     pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     
-    if (pointersRef.current.size === 1) {
+    // Playback Speed Logic
+    const videoWidth = videoRef.current?.clientWidth || window.innerWidth;
+    const isRightSide = e.clientX > videoWidth * 0.75;
+    const isLeftSide = e.clientX < videoWidth * 0.25;
+
+    if (pointersRef.current.size === 1 && scale === 1 && (isRightSide || isLeftSide)) {
+        if (!isPlaying) togglePlay(); // Play the video if it's paused
+        
+        speedCycleTimeoutRef.current = setTimeout(() => {
+            wasLongPress.current = true; // Mark as long press to prevent tap action
+            const speedLevels = [0.5, 1.0, 1.25, 1.5, 2.0];
+            const direction = isRightSide ? 1 : -1;
+            
+            const cycleSpeed = () => {
+                setPlaybackRate(currentRate => {
+                    const currentIndex = speedLevels.indexOf(currentRate);
+                    const nextIndex = Math.max(0, Math.min(speedLevels.length - 1, currentIndex + direction));
+                    return speedLevels[nextIndex];
+                });
+                setShowSpeed(true);
+            };
+            cycleSpeed(); // Initial change
+            
+            if (speedCycleTimeoutRef.current) clearTimeout(speedCycleTimeoutRef.current);
+            speedCycleTimeoutRef.current = setInterval(cycleSpeed, 500); // Cycle every 500ms
+
+        }, 300); // 300ms delay before speed control activates
+    } else if (pointersRef.current.size === 1) {
         pointerStartRef.current = { x: e.clientX, y: e.clientY };
         
-        // Long press for options menu
         optionsMenuTimeoutRef.current = setTimeout(() => {
             if (tapTimeout.current) {
                 clearTimeout(tapTimeout.current);
@@ -309,12 +350,13 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
             wasLongPress.current = true;
             setIsOptionsDialogOpen(true);
             if(isPlaying) togglePlay();
-        }, 500); // Long press duration
+        }, 500);
     }
     
     if (pointersRef.current.size === 2) {
         if (tapTimeout.current) clearTimeout(tapTimeout.current);
         if (optionsMenuTimeoutRef.current) clearTimeout(optionsMenuTimeoutRef.current);
+        if (speedCycleTimeoutRef.current) clearTimeout(speedCycleTimeoutRef.current);
 
         const points = Array.from(pointersRef.current.values());
         initialPinchDistanceRef.current = getDistance(points[0] as any, points[1] as any);
@@ -366,13 +408,15 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   const handlePointerUp = (e: React.PointerEvent) => {
     pointersRef.current.delete(e.pointerId);
 
-    if (optionsMenuTimeoutRef.current) {
-        clearTimeout(optionsMenuTimeoutRef.current);
-        optionsMenuTimeoutRef.current = null;
+    if (optionsMenuTimeoutRef.current) clearTimeout(optionsMenuTimeoutRef.current);
+    if (speedCycleTimeoutRef.current) {
+        clearTimeout(speedCycleTimeoutRef.current);
+        speedCycleTimeoutRef.current = null;
+        if (speedDisplayTimeoutRef.current) clearTimeout(speedDisplayTimeoutRef.current);
+        speedDisplayTimeoutRef.current = setTimeout(() => setShowSpeed(false), 1000);
     }
     
     if (wasLongPress.current) {
-        // Long press was handled, so we do nothing more.
         if(pointersRef.current.size < 1) pointerStartRef.current = null;
         return;
     }
@@ -383,9 +427,8 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
             setPosition({ x: 0, y: 0 });
         }
         lastScaleRef.current = scale;
-        if(pointersRef.current.size < 2) {
-            initialPinchDistanceRef.current = 0;
-        }
+        if(pointersRef.current.size < 2) initialPinchDistanceRef.current = 0;
+
         if (pointersRef.current.size === 1) {
             const remainingPointer = Array.from(pointersRef.current.values())[0] as any;
             pointerStartRef.current = { x: remainingPointer.x, y: remainingPointer.y };
@@ -419,8 +462,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   
   const handleQualityChange = (newQuality: string) => {
     setQuality(newQuality);
-    // In a real app, you would change the video source here.
-    // For this demo, we'll just show a toast.
     toast({
       title: "Quality Changed (Demo)",
       description: `Video quality has been set to ${newQuality}.`,
@@ -457,57 +498,150 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
 
   const handleFollow = () => {
     toast({ title: `Followed ${item.user.username} (Demo)` });
-    // In a real app, you would add logic to update follow state here
   };
 
 
   return (
-    <div 
-        className="w-full h-full relative bg-black grid place-items-center cursor-pointer touch-none overflow-hidden"
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerMove={handlePointerMove}
-        onPointerCancel={handlePointerUp}
-    >
-      <video
-        ref={videoRef}
-        src={item.videoUrl}
-        loop
-        playsInline
-        className="w-full h-full object-cover col-start-1 row-start-1 transition-transform duration-100 ease-out"
-        poster={item.thumbnailUrl}
-        data-ai-hint="short form video"
-        style={{
-            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-            transformOrigin: 'center'
-        }}
-      />
+    <div className="w-full h-full bg-black flex flex-col">
+        <div 
+            className="flex-1 relative grid place-items-center min-h-0 cursor-pointer touch-none overflow-hidden"
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerMove={handlePointerMove}
+            onPointerCancel={handlePointerUp}
+        >
+            <video
+                ref={videoRef}
+                src={item.videoUrl}
+                loop
+                playsInline
+                className="w-full h-full object-cover col-start-1 row-start-1 transition-transform duration-100 ease-out"
+                poster={item.thumbnailUrl}
+                data-ai-hint="short form video"
+                style={{
+                    transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                    transformOrigin: 'center'
+                }}
+            />
 
-      {showHeart && (
-          <Heart fill="white" className="h-24 w-24 text-white col-start-1 row-start-1 z-20 pointer-events-none animate-like-heart" />
-      )}
-      
-      {!isPlaying && (
-          <Play className="h-20 w-20 text-white/70 pointer-events-none col-start-1 row-start-1 z-20" fill="white" />
-      )}
-      
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none col-start-1 row-start-1 z-10" />
+            {showHeart && (
+                <Heart fill="white" className="h-24 w-24 text-white col-start-1 row-start-1 z-20 pointer-events-none animate-like-heart" />
+            )}
+            
+            {!isPlaying && (
+                <Play className="h-20 w-20 text-white/70 pointer-events-none col-start-1 row-start-1 z-20" fill="white" />
+            )}
+            
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none col-start-1 row-start-1 z-10" />
+            
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
+                <CreatorAvatar user={item.user} onFollow={handleFollow} />
+            </div>
+            
+            <VideoActions 
+                item={item} 
+                isLiked={isLiked} 
+                likeCount={likeCount} 
+                handleLikeClick={handleLikeClick}
+                isCommentSheetOpen={isCommentSheetOpen}
+                setIsCommentSheetOpen={setIsCommentSheetOpen}
+                videoOwnerId={item.user.id}
+                viewCount={item.views}
+            />
 
-      <CreatorAvatar user={item.user} onFollow={handleFollow} />
-      
-      <VideoActions 
-          item={item} 
-          isLiked={isLiked} 
-          likeCount={likeCount} 
-          handleLikeClick={handleLikeClick}
-          isCommentSheetOpen={isCommentSheetOpen}
-          setIsCommentSheetOpen={setIsCommentSheetOpen}
-          videoOwnerId={item.user.id}
-          viewCount={item.views}
-      />
-      
-      {(!isPlaying && isActive) && (
-        <div className="absolute bottom-4 left-4 right-4 z-30 px-2" onClick={(e) => e.stopPropagation()}>
+            {showSpeed && (
+                <div className="absolute inset-0 grid place-items-center z-30 pointer-events-none">
+                    <div className="bg-black/50 text-white font-bold text-2xl px-4 py-2 rounded-full animate-pulse">
+                        {playbackRate.toFixed(2)}x
+                    </div>
+                </div>
+            )}
+
+            <Dialog open={isOptionsDialogOpen} onOpenChange={setIsOptionsDialogOpen}>
+                <DialogContent className="bg-black/80 border-white/20 text-white" onClick={(e) => e.stopPropagation()}>
+                <DialogHeader>
+                    <DialogTitle>Options</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col gap-1">
+                    <Button variant="ghost" className="justify-start text-base p-3 h-auto" onClick={handleDownloadClick}>
+                        <Download className="mr-3 h-5 w-5" /> Download
+                    </Button>
+
+                    {isPipSupported && (
+                        <Button variant="ghost" className="justify-start text-base p-3 h-auto" onClick={handlePipClick}>
+                            <PictureInPicture2 className="mr-3 h-5 w-5" /> Picture-in-Picture
+                        </Button>
+                    )}
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="justify-start text-base p-3 h-auto w-full">
+                                <Settings className="mr-3 h-5 w-5" /> Settings
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                            align="start"
+                            side="right"
+                            className="bg-black/70 border-white/30 text-white min-w-[120px]"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <DropdownMenuLabel>Quality</DropdownMenuLabel>
+                            <DropdownMenuRadioGroup value={quality} onValueChange={handleQualityChange}>
+                                {['Auto', '1080p', '720p', '360p'].map((q) => (
+                                <DropdownMenuRadioItem key={q} value={q}>
+                                    {q}
+                                </DropdownMenuRadioItem>
+                                ))}
+                            </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {item.product && (
+                        <Button variant="ghost" className="justify-start text-base p-3 h-auto" onClick={() => { setIsProductSheetOpen(true); setIsOptionsDialogOpen(false); }}>
+                            <ShoppingBag className="mr-3 h-5 w-5" /> Shop This Video
+                        </Button>
+                    )}
+                </div>
+                </DialogContent>
+            </Dialog>
+            
+            {item.product && (
+                <Sheet open={isProductSheetOpen} onOpenChange={setIsProductSheetOpen}>
+                <SheetContent
+                    side="bottom"
+                    className="h-auto max-h-[75%] bg-background text-foreground z-[70]"
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                >
+                    <SheetHeader>
+                    <SheetTitle className="text-center">Shop This Video</SheetTitle>
+                    </SheetHeader>
+                    <div className="py-4 flex flex-col items-center gap-4">
+                    <div className="relative w-48 h-48 rounded-lg overflow-hidden border">
+                        <Image src={item.product.imageUrl} alt={item.product.name} fill className="object-cover" data-ai-hint="product image" />
+                    </div>
+                    <div className="text-center">
+                        <h3 className="text-xl font-semibold">{item.product.name}</h3>
+                        <p className="text-2xl font-bold text-primary">${item.product.price.toFixed(2)}</p>
+                    </div>
+                    <Button asChild size="lg" className="w-full max-w-sm font-bold">
+                        <a href={item.product.purchaseUrl} target="_blank" rel="noopener noreferrer">
+                            Buy Now
+                        </a>
+                    </Button>
+                    <p className="text-xs text-muted-foreground">You will be redirected to an external site to complete your purchase.</p>
+                    </div>
+                </SheetContent>
+                </Sheet>
+            )}
+        </div>
+        <div
+            className={cn(
+                "h-12 px-4 flex items-center transition-opacity duration-300",
+                !isPlaying && isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            )}
+            onClick={(e) => e.stopPropagation()}
+        >
             <Slider
                 value={[videoProgress]}
                 onValueChange={(value) => {
@@ -518,86 +652,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
                 }}
             />
         </div>
-      )}
-
-      <Dialog open={isOptionsDialogOpen} onOpenChange={setIsOptionsDialogOpen}>
-        <DialogContent className="bg-black/80 border-white/20 text-white" onClick={(e) => e.stopPropagation()}>
-          <DialogHeader>
-            <DialogTitle>Options</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-1">
-            <Button variant="ghost" className="justify-start text-base p-3 h-auto" onClick={handleDownloadClick}>
-                <Download className="mr-3 h-5 w-5" /> Download
-            </Button>
-
-            {isPipSupported && (
-                <Button variant="ghost" className="justify-start text-base p-3 h-auto" onClick={handlePipClick}>
-                    <PictureInPicture2 className="mr-3 h-5 w-5" /> Picture-in-Picture
-                </Button>
-            )}
-
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="justify-start text-base p-3 h-auto w-full">
-                        <Settings className="mr-3 h-5 w-5" /> Settings
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                    align="start"
-                    side="right"
-                    className="bg-black/70 border-white/30 text-white min-w-[120px]"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <DropdownMenuLabel>Quality</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup value={quality} onValueChange={handleQualityChange}>
-                        {['Auto', '1080p', '720p', '360p'].map((q) => (
-                        <DropdownMenuRadioItem key={q} value={q}>
-                            {q}
-                        </DropdownMenuRadioItem>
-                        ))}
-                    </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-            </DropdownMenu>
-
-            {item.product && (
-                <Button variant="ghost" className="justify-start text-base p-3 h-auto" onClick={() => { setIsProductSheetOpen(true); setIsOptionsDialogOpen(false); }}>
-                    <ShoppingBag className="mr-3 h-5 w-5" /> Shop This Video
-                </Button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {item.product && (
-        <Sheet open={isProductSheetOpen} onOpenChange={setIsProductSheetOpen}>
-          <SheetContent
-            side="bottom"
-            className="h-auto max-h-[75%] bg-background text-foreground z-[70]"
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <SheetHeader>
-              <SheetTitle className="text-center">Shop This Video</SheetTitle>
-            </SheetHeader>
-            <div className="py-4 flex flex-col items-center gap-4">
-              <div className="relative w-48 h-48 rounded-lg overflow-hidden border">
-                  <Image src={item.product.imageUrl} alt={item.product.name} fill className="object-cover" data-ai-hint="product image" />
-              </div>
-              <div className="text-center">
-                  <h3 className="text-xl font-semibold">{item.product.name}</h3>
-                  <p className="text-2xl font-bold text-primary">${item.product.price.toFixed(2)}</p>
-              </div>
-              <Button asChild size="lg" className="w-full max-w-sm font-bold">
-                  <a href={item.product.purchaseUrl} target="_blank" rel="noopener noreferrer">
-                      Buy Now
-                  </a>
-              </Button>
-              <p className="text-xs text-muted-foreground">You will be redirected to an external site to complete your purchase.</p>
-            </div>
-          </SheetContent>
-        </Sheet>
-      )}
-
     </div>
   );
 }

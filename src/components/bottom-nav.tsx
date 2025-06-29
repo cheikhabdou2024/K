@@ -39,10 +39,10 @@ export function BottomNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center justify-center -mt-3"
+                className="flex items-center justify-center -mt-2"
               >
-                <div className="h-12 w-16 bg-primary text-primary-foreground rounded-xl flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all duration-300 transform hover:scale-105">
-                  <item.icon className="h-8 w-8" />
+                <div className="h-10 w-14 bg-primary text-primary-foreground rounded-xl flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all duration-300 transform hover:scale-105">
+                  <item.icon className="h-7 w-7" />
                 </div>
               </Link>
             );
