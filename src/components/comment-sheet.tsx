@@ -16,9 +16,19 @@ import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { scanCommentAction } from '@/app/comments/actions';
+import { scanCommentAction, transcribeAudioAction } from '@/app/comments/actions';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+
+const blobToDataUri = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve(reader.result as string);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 
 const AudioPlayer = ({ audioUrl }: { audioUrl: string }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -181,8 +191,15 @@ const CommentItem = ({ comment, onReply, videoOwnerId }: { comment: CommentType;
                     Replying to <span className="text-primary hover:underline cursor-pointer">@{comment.replyTo.username}</span>
                 </p>
             )}
-            {comment.text && <p>{comment.text}</p>}
             {comment.audioUrl && <AudioPlayer audioUrl={comment.audioUrl} />}
+            {comment.text && (
+              <p className={cn(
+                'break-words',
+                comment.audioUrl ? 'pt-2 mt-2 border-t border-primary/20 text-muted-foreground' : ''
+              )}>
+                {comment.text}
+              </p>
+            )}
         </div>
         <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground px-2">
           <span>{comment.timestamp}</span>
@@ -293,11 +310,23 @@ export function CommentSheet({
         audioChunksRef.current.push(event.data);
       };
 
-      mediaRecorderRef.current.onstop = () => {
+      mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         const audioUrl = URL.createObjectURL(audioBlob);
-        handleSend({ audioUrl });
-        stream.getTracks().forEach(track => track.stop()); // Stop microphone access
+        stream.getTracks().forEach(track => track.stop());
+
+        try {
+            const audioDataUri = await blobToDataUri(audioBlob);
+            const { transcription } = await transcribeAudioAction(audioDataUri);
+            await handleSend({ audioUrl, text: transcription });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Transcription Failed',
+                description: 'Sending audio comment without transcription.',
+            });
+            await handleSend({ audioUrl });
+        }
       };
       
       mediaRecorderRef.current.start();
@@ -346,8 +375,13 @@ export function CommentSheet({
   }
   
   const handleSend = async ({ text, audioUrl }: { text?: string; audioUrl?: string }) => {
-    if (!text?.trim() && !audioUrl) return;
-    setIsSending(true);
+    if (!text?.trim() && !audioUrl) {
+        setIsSending(false);
+        cleanupRecording();
+        return;
+    }
+
+    if(!audioUrl) setIsSending(true);
 
     try {
       const scanContent = text || audioUrl || '';
@@ -373,13 +407,11 @@ export function CommentSheet({
               return [newComment, ...prev]; // Fallback if parent disappears
             }
 
-            // Find the last comment in the thread following the parent
             let lastInThreadIndex = directParentIndex;
             for (let i = directParentIndex + 1; i < newComments.length; i++) {
               if (newComments[i].replyTo) {
                 lastInThreadIndex = i;
               } else {
-                // Reached the next top-level comment
                 break;
               }
             }
@@ -408,7 +440,9 @@ export function CommentSheet({
       });
     } finally {
       setIsSending(false);
-      cleanupRecording();
+      if(audioUrl) {
+        cleanupRecording();
+      }
     }
   };
   
