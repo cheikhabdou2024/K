@@ -18,9 +18,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { scanContentAction } from './actions';
 import { useState, useRef, useEffect } from 'react';
-import { Loader2, UploadCloud, X } from 'lucide-react';
+import { Loader2, UploadCloud, X, Music, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { mockSoundLibrary, type Sound } from '@/lib/mock-data';
 
 const FormSchema = z.object({
   caption: z.string().min(10, {
@@ -30,6 +33,7 @@ const FormSchema = z.object({
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska'];
+const AI_EFFECTS = ['None', 'Cartoon', '8-Bit', 'Sketch', 'Noir', 'Pop Art'];
 
 const fileToDataUri = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -49,6 +53,9 @@ export default function CreatePage() {
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [selectedSound, setSelectedSound] = useState<Sound>(mockSoundLibrary[0]);
+  const [selectedEffect, setSelectedEffect] = useState<string>('None');
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -146,7 +153,7 @@ export default function CreatePage() {
 
       toast({
         title: 'Post Successful! (Demo)',
-        description: 'Your video would be live in a real app.',
+        description: `Video with sound "${selectedSound.title}" and effect "${selectedEffect}" would be live.`,
       });
 
       // 4. Reset form and navigate
@@ -244,6 +251,55 @@ export default function CreatePage() {
               </FormItem>
             )}
           />
+
+          <FormItem>
+              <FormLabel className="text-lg font-semibold font-headline">Sound</FormLabel>
+              <Sheet>
+                  <SheetTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-muted-foreground">
+                          <Music className="mr-2 h-4 w-4" />
+                          <span>{selectedSound.title}</span>
+                      </Button>
+                  </SheetTrigger>
+                  <SheetContent side="bottom" className="h-[60%] flex flex-col">
+                      <SheetHeader><SheetTitle>Select a Sound</SheetTitle></SheetHeader>
+                      <ScrollArea className="flex-1 -mx-6">
+                        <div className="flex flex-col gap-1 px-6">
+                            {mockSoundLibrary.map((sound) => (
+                                <Button
+                                    key={sound.id}
+                                    variant={selectedSound.id === sound.id ? 'default' : 'ghost'}
+                                    onClick={() => setSelectedSound(sound)}
+                                    className="justify-start text-base py-6"
+                                >
+                                    {sound.title}
+                                </Button>
+                            ))}
+                        </div>
+                      </ScrollArea>
+                  </SheetContent>
+              </Sheet>
+          </FormItem>
+
+          <FormItem>
+              <FormLabel className="text-lg font-semibold font-headline flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" /> AI Effects
+              </FormLabel>
+              <p className="text-sm text-muted-foreground">Apply a fun AI effect to your video.</p>
+              <div className="flex flex-wrap gap-2">
+                  {AI_EFFECTS.map((effect) => (
+                      <Button
+                          key={effect}
+                          type="button"
+                          variant={selectedEffect === effect ? 'default' : 'outline'}
+                          onClick={() => setSelectedEffect(effect)}
+                      >
+                          {effect}
+                      </Button>
+                  ))}
+              </div>
+          </FormItem>
+          
           <Button type="submit" disabled={isSubmitting} className="w-full font-bold">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isSubmitting ? 'Posting...' : 'Post'}

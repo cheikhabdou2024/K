@@ -1,3 +1,4 @@
+
 import type { Timestamp } from "firebase/firestore";
 
 export interface User {
@@ -161,6 +162,16 @@ export const mockFeedItems: FeedItem[] = [
     shares: 123,
     createdAt: { seconds: 1672531200, nanoseconds: 0 }
   },
+];
+
+export const mockSoundLibrary: Sound[] = [
+    { id: 'sound-1', title: 'Original Sound' },
+    { id: 'sound-2', title: 'Viral Hits - Trending Sounds' },
+    { id: 'sound-3', title: 'Lo-fi Chill - AestheticVibes' },
+    { id: 'sound-4', title: 'Upbeat Pop - Summer Vibes' },
+    { id: 'sound-5', title: 'Epic Movie Trailer' },
+    { id: 'sound-6', title: 'Acoustic Folk - Gentle Mood' },
+    { id: 'sound-7', title: '80s Synthwave - Retro Future' },
 ];
 
 export const mockComments: Comment[] = [
