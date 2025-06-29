@@ -187,6 +187,16 @@ export const mockComments: Comment[] = [
     { id: 'reply-1-3', user: users[1], text: "Seriously, need the location ASAP!", createdAt: new Date("2024-07-22T10:08:00Z"), likes: 18, parentId: 'comment-1', replyTo: users[3] },
     { id: 'reply-1-4', user: users[2], text: "It's from my trip to the Amalfi Coast! Highly recommend.", createdAt: new Date("2024-07-22T10:15:00Z"), likes: 50, parentId: 'comment-1', replyTo: users[3] },
     { id: 'comment-2', user: users[3], text: "Great content, _keep it up_!", createdAt: new Date("2024-07-22T11:00:00Z"), likes: 88 },
+    {
+        id: 'comment-audio',
+        user: users[1],
+        // NOTE: This is a video URL used as a placeholder for an audio file.
+        // The <audio> tag can often play the audio track from video files.
+        audioUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
+        text: "This is a test of the audio comment system. It seems to work pretty well!",
+        createdAt: new Date("2024-07-22T12:00:00Z"),
+        likes: 42
+    },
     { id: 'comment-3', user: users[1], text: "Love this! So creative.", createdAt: new Date("2024-07-22T11:30:00Z"), likes: 231 },
     { id: 'comment-4', user: users[0], text: "This is my ~~least~~ favorite so far!", createdAt: new Date("2024-07-22T11:45:00Z"), likes: 45, replyTo: users[1], parentId: 'comment-3' },
     { id: 'comment-5', user: users[2], text: "For anyone wondering, here is the code: `console.log('hello');`", createdAt: new Date("2024-07-22T11:50:00Z"), likes: 15 },

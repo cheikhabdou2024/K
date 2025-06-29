@@ -315,7 +315,7 @@ export function CommentSheet({
         }
         case 'newest':
         default:
-          return new Date(b.createdAt).getTime() - new Date(b.createdAt).getTime();
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
     });
 
@@ -400,6 +400,7 @@ export function CommentSheet({
         stream.getTracks().forEach(track => track.stop());
 
         try {
+            setIsSending(true);
             const audioDataUri = await blobToDataUri(audioBlob);
             const { transcription } = await transcribeAudioAction(audioDataUri);
             await handleSend({ audioUrl, text: transcription });
@@ -410,6 +411,9 @@ export function CommentSheet({
                 description: 'Sending audio comment without transcription.',
             });
             await handleSend({ audioUrl });
+        } finally {
+            setIsSending(false);
+            cleanupRecording();
         }
       };
       
@@ -447,8 +451,6 @@ export function CommentSheet({
   }
 
   const handleStopAndSend = () => {
-      setIsSending(true);
-      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       if (mediaRecorderRef.current?.state !== 'inactive') {
           mediaRecorderRef.current?.stop();
       }
@@ -461,12 +463,10 @@ export function CommentSheet({
   const handleSend = async ({ text, audioUrl }: { text?: string; audioUrl?: string }) => {
     const contentToScan = text || '';
     if (!contentToScan && !audioUrl) {
-        setIsSending(false);
-        cleanupRecording();
-        return;
+      return;
     }
 
-    if(!audioUrl) setIsSending(true);
+    setIsSending(true);
 
     try {
       const scanResult = await scanCommentAction(contentToScan);
@@ -477,8 +477,6 @@ export function CommentSheet({
           title: 'Comment Blocked',
           description: scanResult.reason || 'This comment violates our community guidelines.',
         });
-        setIsSending(false);
-        cleanupRecording();
         return;
       }
 
@@ -511,9 +509,6 @@ export function CommentSheet({
       });
     } finally {
       setIsSending(false);
-      if(audioUrl) {
-        cleanupRecording();
-      }
     }
   };
   
@@ -526,7 +521,7 @@ export function CommentSheet({
     <Drawer shouldScaleBackground={false} open={open} onOpenChange={onOpenChange}>
       <DrawerTrigger asChild>{children}</DrawerTrigger>
       <DrawerContent
-        className="h-[60%] flex flex-col"
+        className="h-[60%] flex flex-col z-[70]"
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
@@ -620,7 +615,7 @@ export function CommentSheet({
           )}
           {isRecording ? (
             <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={handleCancelRecording} className="text-destructive hover:bg-destructive/10 rounded-full">
+                <Button variant="ghost" size="icon" onClick={handleCancelRecording} className="text-destructive hover:bg-destructive/10 rounded-full" disabled={isSending}>
                     <Trash2 className="h-5 w-5"/>
                 </Button>
                 <div className="flex-1 bg-muted rounded-full h-10 flex items-center justify-between px-4">
@@ -654,7 +649,7 @@ export function CommentSheet({
                                 <Smile className="h-5 w-5" />
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-80 h-96 p-0 mb-2 z-[100]">
+                        <PopoverContent className="w-80 h-96 p-0 mb-2 z-[80]">
                             <ScrollArea className="h-full">
                                 <div className="p-2">
                                 {emojiCategories.map(category => (
