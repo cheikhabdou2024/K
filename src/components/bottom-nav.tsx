@@ -31,7 +31,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="h-16 bg-background border-t border-border z-50 shrink-0">
+    <nav className="h-14 bg-background border-t border-border z-50 shrink-0">
       <div className="flex justify-around items-center h-full max-w-lg mx-auto">
         {navItems.map((item) => {
           if (item.href === '/create') {
@@ -41,8 +41,8 @@ export function BottomNav() {
                 href={item.href}
                 className="flex items-center justify-center -mt-2"
               >
-                <div className="h-10 w-14 bg-primary text-primary-foreground rounded-xl flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all duration-300 transform hover:scale-105">
-                  <item.icon className="h-7 w-7" />
+                <div className="h-8 w-11 bg-primary text-primary-foreground rounded-xl flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all duration-300 transform hover:scale-105">
+                  <item.icon className="h-5 w-5" />
                 </div>
               </Link>
             );
@@ -55,11 +55,11 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex flex-col items-center justify-center w-16 h-16 group"
+              className="flex flex-col items-center justify-center w-14 h-14 group"
             >
               <item.icon
                 className={cn(
-                  'h-6 w-6 transition-colors',
+                  'h-5 w-5 transition-colors',
                   isActive ? 'text-primary' : 'text-muted-foreground',
                   'group-hover:text-primary/80'
                 )}
