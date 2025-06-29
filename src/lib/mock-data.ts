@@ -52,9 +52,9 @@ export interface FeedItem extends Omit<FirestorePost, 'userId' | 'createdAt'> {
 export interface Comment {
   id:string;
   user: User;
-  text?: string;
-  audioUrl?: string;
+  text: string;
   timestamp: string;
+  likes: number;
 }
 
 export interface Story {
@@ -175,10 +175,10 @@ export const mockSoundLibrary: Sound[] = [
 ];
 
 export const mockComments: Comment[] = [
-    { id: 'comment-1', user: users[2], text: "Wow, this looks amazing!", timestamp: "2h ago" },
-    { id: 'comment-2', user: users[3], text: "Great content, keep it up!", timestamp: "1h ago" },
-    { id: 'comment-3', user: users[1], text: "Love this! So creative.", timestamp: "30m ago" },
-    { id: 'comment-4', user: users[0], audioUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4", timestamp: "15m ago" },
+    { id: 'comment-1', user: users[2], text: "Wow, this looks amazing!", timestamp: "2h ago", likes: 125 },
+    { id: 'comment-2', user: users[3], text: "Great content, keep it up!", timestamp: "1h ago", likes: 88 },
+    { id: 'comment-3', user: users[1], text: "Love this! So creative.", timestamp: "30m ago", likes: 231 },
+    { id: 'comment-4', user: users[0], text: "This is my favorite so far!", timestamp: "15m ago", likes: 45 },
 ];
 
 export const mockStories: Story[] = users.slice(1).map((user, index) => ({
