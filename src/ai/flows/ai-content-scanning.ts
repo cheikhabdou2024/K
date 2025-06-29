@@ -41,32 +41,31 @@ export async function aiContentScan(input: AiContentScanInput): Promise<AiConten
 
 const safetyConfig = {
   safetySettings: [
-    {category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE'},
+    {category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_LOW_AND_ABOVE'},
     {category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE'},
     {category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_LOW_AND_ABOVE'},
-    {category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE'},
-    {category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_ONLY_HIGH'},
+    {category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE'},
+    {category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_MEDIUM_AND_ABOVE'},
   ],
 };
 
-const basePrompt = `You are an AI content moderation tool. Your task is to determine if the given content is safe for all users.
+const basePrompt = `You are a strict AI content moderation engine. Your primary function is to analyze content and determine if it violates community guidelines. You must be extremely strict and flag any content that is even remotely offensive, hateful, harassing, or sexually explicit.
 
-  Here are the content guidelines:
-  - No adult content or sexually explicit material.
-  - No harassment, bullying, or targeted abuse.
-  - No hate speech, discrimination, or offensive language.
-  - No misinformation or false/misleading information.
-  - No content promoting dangerous or harmful activities.
+Your output MUST be a JSON object with 'isSafe' (boolean) and 'reason' (string, optional).
 
-  Based on these guidelines, please analyze the content and determine if it is safe.
-  If the content violates any of the guidelines, set isSafe to false and provide a reason. Otherwise, set isSafe to true.
+Here are the guidelines:
+- **Zero Tolerance for Hate Speech & Harassment**: Any form of hate speech, discrimination, personal attacks, insults, or harassment is strictly prohibited. This includes phrases like "fuck you".
+- **No Adult Content**: No sexually explicit material, nudity, or suggestive content.
+- **No Dangerous Content**: No promotion of dangerous acts, self-harm, or violence.
+
+Analyze the following content. If it violates ANY of these rules, you MUST set 'isSafe' to false and provide a specific reason. Otherwise, set 'isSafe' to true.
 `;
 
 const aiTextScanPrompt = ai.definePrompt({
   name: 'aiTextScanPrompt',
   input: {schema: z.object({content: z.string()})},
   output: {schema: AiContentScanOutputSchema},
-  prompt: `${basePrompt}\n\nAnalyze the following text content: {{{content}}}`,
+  prompt: `${basePrompt}\n\nContent to analyze:\n"{{{content}}}"`,
   config: safetyConfig,
 });
 
@@ -86,20 +85,27 @@ const aiContentScanFlow = ai.defineFlow(
     outputSchema: AiContentScanOutputSchema,
   },
   async input => {
-    if (input.contentType === 'text') {
-      const {output} = await aiTextScanPrompt({ content: input.content });
-      // If the model's safety settings are triggered, the output will be null.
-      // We must handle this case to ensure we correctly flag the content as unsafe.
-      if (!output) {
-          return { isSafe: false, reason: "This comment violates our community guidelines for harassment or hate speech." };
+    try {
+      if (input.contentType === 'text') {
+        const {output} = await aiTextScanPrompt({ content: input.content });
+        // If the model's safety settings are triggered, the output will be null.
+        // We must handle this case to ensure we correctly flag the content as unsafe.
+        if (!output) {
+            return { isSafe: false, reason: "This comment violates our community guidelines for harassment or hate speech." };
+        }
+        return output;
+      } else {
+        const {output} = await aiNonTextScanPrompt({ content: input.content });
+         if (!output) {
+            return { isSafe: false, reason: "This content violates our community guidelines." };
+        }
+        return output;
       }
-      return output;
-    } else {
-      const {output} = await aiNonTextScanPrompt({ content: input.content });
-       if (!output) {
-          return { isSafe: false, reason: "This content violates our community guidelines." };
-      }
-      return output;
+    } catch (error) {
+      // If the model throws an error (e.g., due to a safety block), we can inspect it.
+      // For simplicity, we'll treat any processing error as a safety failure.
+      console.error("Error during content scan flow, likely due to safety settings:", error);
+      return { isSafe: false, reason: "This content was blocked by our safety filters." };
     }
   }
 );
