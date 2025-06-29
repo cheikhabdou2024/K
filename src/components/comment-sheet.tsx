@@ -9,7 +9,7 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { Button } from './ui/button';
-import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark, Crown, CheckCircle2, Pin, MessageSquareReply, ChevronDown, Smile, Sparkles } from 'lucide-react';
+import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark, Crown, CheckCircle2, Pin, MessageSquareReply, ChevronDown, Smile, Sparkles, Shield } from 'lucide-react';
 import { mockComments, mockMe, type Comment as CommentType } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
@@ -23,6 +23,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { formatDistanceToNow } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Checkbox } from './ui/checkbox';
 
 const blobToDataUri = (blob: Blob) =>
   new Promise<string>((resolve, reject) => {
@@ -116,7 +117,27 @@ const AudioPlayer = ({ audioUrl }: { audioUrl: string }) => {
 };
 
 
-const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, isViewingUserCreator }: { comment: CommentType; onReply: (comment: CommentType) => void; videoOwnerId: string; isPinned: boolean; onPinComment: (id: string) => void; isViewingUserCreator: boolean; }) => {
+const CommentItem = ({
+  comment,
+  onReply,
+  videoOwnerId,
+  isPinned,
+  onPinComment,
+  isViewingUserCreator,
+  isModMode,
+  isSelected,
+  onSelectComment,
+}: {
+  comment: CommentType;
+  onReply: (comment: CommentType) => void;
+  videoOwnerId: string;
+  isPinned: boolean;
+  onPinComment: (id: string) => void;
+  isViewingUserCreator: boolean;
+  isModMode: boolean;
+  isSelected: boolean;
+  onSelectComment: (id: string) => void;
+}) => {
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(comment.likes);
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -142,7 +163,16 @@ const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, i
   };
 
   return (
-    <div className={cn("flex items-start gap-3 pr-4", { "ml-8": !!comment.parentId })}>
+    <div className={cn("flex items-start gap-2 pr-4", { "ml-8": !!comment.parentId })}>
+       {isModMode && (
+        <div className="pt-2">
+            <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onSelectComment(comment.id)}
+                aria-label={`Select comment by ${comment.user.username}`}
+            />
+        </div>
+      )}
       <Avatar className="h-8 w-8">
         <AvatarImage src={comment.user.avatarUrl} />
         <AvatarFallback>{comment.user.name.charAt(0)}</AvatarFallback>
@@ -287,6 +317,11 @@ export function CommentSheet({
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
   const [fullyExpandedThreads, setFullyExpandedThreads] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState('newest');
+
+  // Moderation state
+  const [isModMode, setIsModMode] = useState(false);
+  const [selectedComments, setSelectedComments] = useState<Set<string>>(new Set());
+  const isViewingUserCreator = videoOwnerId === mockMe.id;
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -526,6 +561,45 @@ export function CommentSheet({
       handleSend({ text: commentText });
   }
 
+  const toggleModMode = () => {
+    setIsModMode(prev => {
+        if (prev) { // if turning off mod mode
+            setSelectedComments(new Set());
+        }
+        return !prev;
+    });
+  };
+
+  const handleSelectComment = (commentId: string) => {
+    setSelectedComments(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(commentId)) {
+            newSet.delete(commentId);
+        } else {
+            newSet.add(commentId);
+        }
+        return newSet;
+    });
+  };
+
+  const handleBulkDelete = () => {
+    const allIdsToDelete = new Set(selectedComments);
+    comments.forEach(comment => {
+        if (comment.parentId && selectedComments.has(comment.parentId)) {
+            allIdsToDelete.add(comment.id);
+        }
+    });
+
+    setComments(prev => prev.filter(c => !allIdsToDelete.has(c.id)));
+    toast({
+        title: `${selectedComments.size} comment thread(s) deleted`,
+        description: `A total of ${allIdsToDelete.size} comments were removed.`,
+    });
+    setSelectedComments(new Set());
+    setIsModMode(false);
+  };
+
+
   return (
     <Drawer shouldScaleBackground={false} open={open} onOpenChange={onOpenChange}>
       <DrawerTrigger asChild>{children}</DrawerTrigger>
@@ -534,10 +608,15 @@ export function CommentSheet({
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
-        <DrawerHeader className="text-center p-4 pb-2">
-            <div className="relative">
-              <DrawerTitle>{comments.length.toLocaleString()} Comments</DrawerTitle>
-              <div className="absolute -top-1 right-0">
+        <DrawerHeader className="p-4 pb-2">
+            <div className="flex justify-between items-center gap-2">
+                 {isViewingUserCreator ? (
+                    <Button variant={isModMode ? "secondary" : "outline"} size="sm" onClick={toggleModMode} className="w-[120px]">
+                        {isModMode ? 'Cancel' : <><Shield className="h-4 w-4" /><span>Moderate</span></>}
+                    </Button>
+                ) : <div className="w-[120px]" /> /* Spacer */}
+                <DrawerTitle className="text-center flex-1">{comments.length.toLocaleString()} Comments</DrawerTitle>
+                <div className="w-[140px] flex justify-end">
                   <Select value={sortBy} onValueChange={setSortBy}>
                       <SelectTrigger className="w-[140px] h-9 text-xs" aria-label="Sort comments by">
                           <SelectValue placeholder="Sort by..." />
@@ -549,7 +628,7 @@ export function CommentSheet({
                           <SelectItem value="oldest">Oldest</SelectItem>
                       </SelectContent>
                   </Select>
-              </div>
+                </div>
             </div>
         </DrawerHeader>
         <ScrollArea className="flex-1 my-2">
@@ -572,7 +651,10 @@ export function CommentSheet({
                                 videoOwnerId={videoOwnerId}
                                 isPinned={thread.id === pinnedCommentId}
                                 onPinComment={handlePinComment}
-                                isViewingUserCreator={videoOwnerId === mockMe.id}
+                                isViewingUserCreator={isViewingUserCreator}
+                                isModMode={isModMode}
+                                isSelected={selectedComments.has(thread.id)}
+                                onSelectComment={handleSelectComment}
                             />
                             
                             {isExpanded && thread.replies && thread.replies.length > 0 && (
@@ -585,7 +667,10 @@ export function CommentSheet({
                                             videoOwnerId={videoOwnerId}
                                             isPinned={false} // Replies cannot be pinned directly
                                             onPinComment={handlePinComment}
-                                            isViewingUserCreator={videoOwnerId === mockMe.id}
+                                            isViewingUserCreator={isViewingUserCreator}
+                                            isModMode={isModMode}
+                                            isSelected={selectedComments.has(reply.id)}
+                                            onSelectComment={handleSelectComment}
                                         />
                                     ))}
                                 </div>
@@ -614,85 +699,108 @@ export function CommentSheet({
             </div>
         </ScrollArea>
         <div className="p-4 bg-background border-t">
-          {replyingTo && (
-            <div className="px-2 pb-2 text-sm text-muted-foreground flex justify-between items-center">
-              <span>Replying to @{replyingTo.user.username}</span>
-              <Button variant="ghost" size="icon" className="h-6 w-auto px-2 text-xs" onClick={() => setReplyingTo(null)}>
-                Cancel
-              </Button>
-            </div>
-          )}
-          {isRecording ? (
-            <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={handleCancelRecording} className="text-destructive hover:bg-destructive/10 rounded-full" disabled={isSending}>
-                    <Trash2 className="h-5 w-5"/>
-                </Button>
-                <div className="flex-1 bg-muted rounded-full h-10 flex items-center justify-between px-4">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-primary" onClick={isPaused ? handleResumeRecording : handlePauseRecording}>
-                        {isPaused ? <Mic className="h-4 w-4" /> : <Pause className="h-4 w-4 fill-current" />}
-                    </Button>
-                    {isPaused ? <p className="text-sm text-muted-foreground">Paused</p> : <AnimatedSoundWave />}
-                    <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>
+          {isModMode ? (
+            selectedComments.size > 0 ? (
+                 <div className="flex items-center justify-between h-10">
+                    <div className="text-sm font-medium">
+                        {selectedComments.size} selected
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setSelectedComments(new Set())}>Deselect All</Button>
+                        <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                        </Button>
+                    </div>
                 </div>
-                <Button size="icon" onClick={handleStopAndSend} disabled={isSending} className="bg-primary rounded-full">
-                    {isSending ? <Loader2 className="animate-spin" /> : <Send className="h-5 w-5" />}
-                </Button>
-            </div>
+            ) : (
+                <div className="text-center text-sm text-muted-foreground flex items-center justify-center h-10">
+                    Select comments to moderate.
+                </div>
+            )
           ) : (
-             <form onSubmit={handleFormSubmit} className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                    <AvatarImage src={mockMe.avatarUrl} />
-                    <AvatarFallback>{mockMe.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 relative flex items-center">
-                    <Input 
-                        placeholder="Add a comment..." 
-                        className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-ring pr-10" 
-                        value={commentText}
-                        onChange={(e) => setCommentText(e.target.value)}
-                        disabled={isSending}
-                    />
-                     <Popover>
-                        <PopoverTrigger asChild>
-                            <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full text-muted-foreground hover:text-primary">
-                                <Smile className="h-5 w-5" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 h-96 p-0 mb-2 z-[80]">
-                            <ScrollArea className="h-full">
-                                <div className="p-2">
-                                {emojiCategories.map(category => (
-                                    <div key={category.name}>
-                                        <h3 className="text-sm font-semibold text-muted-foreground px-2 py-1">{category.name}</h3>
-                                        <div className="grid grid-cols-8 gap-1">
-                                            {category.emojis.map((emoji, index) => (
-                                                <button
-                                                    key={`${category.name}-${index}`}
-                                                    type="button"
-                                                    className="text-2xl rounded-md hover:bg-muted p-1 transition-colors"
-                                                    onClick={() => setCommentText(prev => prev + emoji)}
-                                                >
-                                                    {emoji}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                                </div>
-                            </ScrollArea>
-                        </PopoverContent>
-                    </Popover>
+            <>
+              {replyingTo && (
+                <div className="px-2 pb-2 text-sm text-muted-foreground flex justify-between items-center">
+                  <span>Replying to @{replyingTo.user.username}</span>
+                  <Button variant="ghost" size="icon" className="h-6 w-auto px-2 text-xs" onClick={() => setReplyingTo(null)}>
+                    Cancel
+                  </Button>
                 </div>
-                {commentText.trim() ? (
-                    <Button type="submit" size="icon" variant="ghost" className="bg-transparent rounded-full" disabled={isSending}>
-                        {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 text-primary" />}
+              )}
+              {isRecording ? (
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={handleCancelRecording} className="text-destructive hover:bg-destructive/10 rounded-full" disabled={isSending}>
+                        <Trash2 className="h-5 w-5"/>
                     </Button>
-                ) : (
-                     <Button type="button" size="icon" variant="ghost" className="bg-transparent rounded-full" onClick={handleStartRecording} disabled={isSending}>
-                        {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Mic className="h-5 w-5 text-primary" />}
+                    <div className="flex-1 bg-muted rounded-full h-10 flex items-center justify-between px-4">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-primary" onClick={isPaused ? handleResumeRecording : handlePauseRecording}>
+                            {isPaused ? <Mic className="h-4 w-4" /> : <Pause className="h-4 w-4 fill-current" />}
+                        </Button>
+                        {isPaused ? <p className="text-sm text-muted-foreground">Paused</p> : <AnimatedSoundWave />}
+                        <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>
+                    </div>
+                    <Button size="icon" onClick={handleStopAndSend} disabled={isSending} className="bg-primary rounded-full">
+                        {isSending ? <Loader2 className="animate-spin" /> : <Send className="h-5 w-5" />}
                     </Button>
-                )}
-            </form>
+                </div>
+              ) : (
+                 <form onSubmit={handleFormSubmit} className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={mockMe.avatarUrl} />
+                        <AvatarFallback>{mockMe.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 relative flex items-center">
+                        <Input 
+                            placeholder="Add a comment..." 
+                            className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-ring pr-10" 
+                            value={commentText}
+                            onChange={(e) => setCommentText(e.target.value)}
+                            disabled={isSending}
+                        />
+                         <Popover>
+                            <PopoverTrigger asChild>
+                                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full text-muted-foreground hover:text-primary">
+                                    <Smile className="h-5 w-5" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 h-96 p-0 mb-2 z-[80]">
+                                <ScrollArea className="h-full">
+                                    <div className="p-2">
+                                    {emojiCategories.map(category => (
+                                        <div key={category.name}>
+                                            <h3 className="text-sm font-semibold text-muted-foreground px-2 py-1">{category.name}</h3>
+                                            <div className="grid grid-cols-8 gap-1">
+                                                {category.emojis.map((emoji, index) => (
+                                                    <button
+                                                        key={`${category.name}-${index}`}
+                                                        type="button"
+                                                        className="text-2xl rounded-md hover:bg-muted p-1 transition-colors"
+                                                        onClick={() => setCommentText(prev => prev + emoji)}
+                                                    >
+                                                        {emoji}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    </div>
+                                </ScrollArea>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                    {commentText.trim() ? (
+                        <Button type="submit" size="icon" variant="ghost" className="bg-transparent rounded-full" disabled={isSending}>
+                            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 text-primary" />}
+                        </Button>
+                    ) : (
+                         <Button type="button" size="icon" variant="ghost" className="bg-transparent rounded-full" onClick={handleStartRecording} disabled={isSending}>
+                            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Mic className="h-5 w-5 text-primary" />}
+                        </Button>
+                    )}
+                </form>
+              )}
+            </>
           )}
         </div>
       </DrawerContent>
