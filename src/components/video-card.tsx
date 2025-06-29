@@ -50,7 +50,7 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
         />
         <span className="text-xs">{formattedLikeCount}</span>
       </Button>
-       <CommentSheet
+      <CommentSheet
         commentCount={item.comments}
         open={isCommentSheetOpen}
         onOpenChange={setIsCommentSheetOpen}
@@ -112,6 +112,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   
   const [isCommentSheetOpen, setIsCommentSheetOpen] = useState(false);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const wasPlayingBeforeCommentOpen = useRef(false);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -136,6 +137,28 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
       }
     };
   }, [isActive]);
+
+  useEffect(() => {
+    if (!isActive) return; // Only for the active video
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
+
+    if (isCommentSheetOpen) {
+      // Comments are open
+      if (!videoElement.paused) {
+        wasPlayingBeforeCommentOpen.current = true;
+        videoElement.pause();
+        setIsPlaying(false);
+      }
+    } else {
+      // Comments are closed
+      if (wasPlayingBeforeCommentOpen.current && videoElement.paused) {
+        videoElement.play().catch(error => console.error("Video play failed:", error));
+        setIsPlaying(true);
+      }
+      wasPlayingBeforeCommentOpen.current = false; // Reset the flag
+    }
+  }, [isCommentSheetOpen, isActive]);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -204,7 +227,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     const deltaX = Math.abs(end.x - start.x);
     const deltaY = end.y - start.y;
 
-    // A valid swipe up must be primarily vertical.
+    // A valid swipe up must be primarily vertical and a certain distance.
     if (deltaY < -40 && deltaX < 30) {
         setIsCommentSheetOpen(true);
         // Cancel any pending single-tap action (play/pause).
