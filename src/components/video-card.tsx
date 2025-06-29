@@ -637,7 +637,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         </div>
         <div
             className={cn(
-                "h-12 px-4 flex items-center transition-opacity duration-300",
+                "h-8 px-4 flex items-center transition-opacity duration-300",
                 !isPlaying && isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'
             )}
             onClick={(e) => e.stopPropagation()}
