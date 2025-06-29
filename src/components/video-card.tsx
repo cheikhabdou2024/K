@@ -16,9 +16,11 @@ interface VideoActionsProps {
   isLiked: boolean;
   likeCount: number;
   handleLikeClick: (e: React.MouseEvent) => void;
+  isCommentSheetOpen: boolean;
+  setIsCommentSheetOpen: (open: boolean) => void;
 }
 
-const VideoActions = ({ item, isLiked, likeCount, handleLikeClick }: VideoActionsProps) => {
+const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentSheetOpen, setIsCommentSheetOpen }: VideoActionsProps) => {
   const [formattedLikeCount, setFormattedLikeCount] = useState('');
 
   useEffect(() => {
@@ -41,7 +43,11 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick }: VideoAction
         />
         <span className="text-xs">{formattedLikeCount}</span>
       </Button>
-      <CommentSheet commentCount={item.comments}>
+      <CommentSheet 
+        commentCount={item.comments}
+        open={isCommentSheetOpen}
+        onOpenChange={setIsCommentSheetOpen}
+      >
         <Button
           variant="ghost"
           size="icon"
@@ -96,6 +102,9 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
 
   const [isLiked, setIsLiked] = useState(item.isLiked || false);
   const [likeCount, setLikeCount] = useState(item.likes);
+  
+  const [isCommentSheetOpen, setIsCommentSheetOpen] = useState(false);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -106,6 +115,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         videoRef.current.pause();
         videoRef.current.currentTime = 0;
         setIsPlaying(false);
+        setIsCommentSheetOpen(false); // Close comments when swiping to new video
       }
     }
 
@@ -169,8 +179,49 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     }
   };
   
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.isPrimary) {
+      pointerStartRef.current = { x: e.clientX, y: e.clientY };
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!e.isPrimary || !pointerStartRef.current) {
+      return;
+    }
+
+    const start = pointerStartRef.current;
+    const end = { x: e.clientX, y: e.clientY };
+    pointerStartRef.current = null;
+
+    const deltaX = end.x - start.x;
+    const deltaY = end.y - start.y;
+
+    const swipeThreshold = 60;
+    const tapThreshold = 10;
+
+    // Check for a swipe up
+    if (deltaY < -swipeThreshold && Math.abs(deltaX) < swipeThreshold) {
+      setIsCommentSheetOpen(true);
+      if (tapTimeout.current) {
+        clearTimeout(tapTimeout.current);
+        tapTimeout.current = null;
+      }
+      return;
+    }
+
+    // Check if it's a tap (minimal movement)
+    if (Math.abs(deltaX) < tapThreshold && Math.abs(deltaY) < tapThreshold) {
+      handleTap();
+    }
+  };
+  
   return (
-    <div className="w-full h-full relative bg-black grid place-items-center" onClick={handleTap}>
+    <div 
+        className="w-full h-full relative bg-black grid place-items-center" 
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+    >
       <video
         ref={videoRef}
         src={item.videoUrl}
@@ -190,7 +241,14 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none col-start-1 row-start-1" />
       <VideoInfo item={item} />
-      <VideoActions item={item} isLiked={isLiked} likeCount={likeCount} handleLikeClick={handleLikeClick} />
+      <VideoActions 
+        item={item} 
+        isLiked={isLiked} 
+        likeCount={likeCount} 
+        handleLikeClick={handleLikeClick}
+        isCommentSheetOpen={isCommentSheetOpen}
+        setIsCommentSheetOpen={setIsCommentSheetOpen}
+      />
     </div>
   );
 }

@@ -175,9 +175,13 @@ const AnimatedSoundWave = () => (
 export function CommentSheet({
   commentCount,
   children,
+  open,
+  onOpenChange,
 }: {
   commentCount: number;
   children: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const { toast } = useToast();
   const [comments, setComments] = useState(mockComments);
@@ -341,7 +345,7 @@ export function CommentSheet({
   }
 
   return (
-    <Drawer shouldScaleBackground={false}>
+    <Drawer shouldScaleBackground={false} open={open} onOpenChange={onOpenChange}>
       <DrawerTrigger asChild>{children}</DrawerTrigger>
       <DrawerContent className="h-[60%] flex flex-col">
         <DrawerHeader className="text-center p-4 pb-2">
