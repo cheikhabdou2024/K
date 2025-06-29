@@ -4,7 +4,7 @@
 import type { FeedItem, User, Product } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
-import { Heart, MessageCircle, Send, Play, Settings, Plus, Eye, PictureInPicture2, ShoppingBag } from 'lucide-react';
+import { Heart, MessageCircle, Send, Play, Settings, Plus, Eye, PictureInPicture2, ShoppingBag, Download } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { CommentSheet } from './comment-sheet';
@@ -18,6 +18,12 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Sheet,
   SheetContent,
@@ -36,20 +42,14 @@ interface VideoActionsProps {
   isCommentSheetOpen: boolean;
   setIsCommentSheetOpen: (open: boolean) => void;
   videoOwnerId: string;
-  selectedQuality: string;
-  onQualityChange: (quality: string) => void;
   viewCount: number;
-  onPipClick: () => void;
-  isPipSupported: boolean;
 }
 
-const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentSheetOpen, setIsCommentSheetOpen, videoOwnerId, selectedQuality, onQualityChange, viewCount, onPipClick, isPipSupported }: VideoActionsProps) => {
+const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentSheetOpen, setIsCommentSheetOpen, videoOwnerId, viewCount }: VideoActionsProps) => {
   const [formattedLikeCount, setFormattedLikeCount] = useState('');
   const [formattedCommentCount, setFormattedCommentCount] = useState('');
   const [formattedShareCount, setFormattedShareCount] = useState('');
   const [formattedViewCount, setFormattedViewCount] = useState('');
-  const [isProductSheetOpen, setIsProductSheetOpen] = useState(false);
-
 
   useEffect(() => {
     // This effect runs only on the client, after hydration,
@@ -111,103 +111,18 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
         <Send className="h-8 w-8 text-white" />
         <span className="text-xs">{formattedShareCount}</span>
       </Button>
-      {isPipSupported && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
-          onClick={onPipClick}
-          aria-label="Enter Picture-in-Picture mode"
-        >
-          <PictureInPicture2 className="h-8 w-8 text-white" />
-          <span className="text-xs">PiP</span>
-        </Button>
-      )}
-       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
-          >
-            <Settings className="h-8 w-8 text-white" />
-            <span className="text-xs">{selectedQuality === 'Auto' ? 'Auto' : selectedQuality.replace('p', '')}</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="bg-black/70 border-white/30 text-white min-w-[120px]">
-          <DropdownMenuLabel>Quality</DropdownMenuLabel>
-          <DropdownMenuRadioGroup value={selectedQuality} onValueChange={onQualityChange}>
-            {['Auto', '1080p', '720p', '360p'].map((q) => (
-              <DropdownMenuRadioItem key={q} value={q}>
-                {q}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      {item.product && (
-        <Sheet open={isProductSheetOpen} onOpenChange={setIsProductSheetOpen}>
-          <SheetTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
-              aria-label="View product"
-            >
-              <ShoppingBag className="h-8 w-8 text-white" />
-              <span className="text-xs">Shop</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent
-            side="bottom"
-            className="h-auto max-h-[75%] bg-background text-foreground z-[70]"
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <SheetHeader>
-              <SheetTitle className="text-center">Shop This Video</SheetTitle>
-            </SheetHeader>
-            <div className="py-4 flex flex-col items-center gap-4">
-              <div className="relative w-48 h-48 rounded-lg overflow-hidden border">
-                  <Image src={item.product.imageUrl} alt={item.product.name} fill className="object-cover" data-ai-hint="product image" />
-              </div>
-              <div className="text-center">
-                  <h3 className="text-xl font-semibold">{item.product.name}</h3>
-                  <p className="text-2xl font-bold text-primary">${item.product.price.toFixed(2)}</p>
-              </div>
-              <Button asChild size="lg" className="w-full max-w-sm font-bold">
-                  <a href={item.product.purchaseUrl} target="_blank" rel="noopener noreferrer">
-                      Buy Now
-                  </a>
-              </Button>
-              <p className="text-xs text-muted-foreground">You will be redirected to an external site to complete your purchase.</p>
-            </div>
-          </SheetContent>
-        </Sheet>
-      )}
     </div>
   );
 };
 
 
 const CreatorAvatar = ({ user }: { user: User }) => (
-  <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10">
+  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
     <div className="relative">
       <Avatar className="w-12 h-12 border-2 border-white shadow-lg">
         <AvatarImage src={user.avatarUrl} alt={user.name} />
         <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
       </Avatar>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          // In a real app, you would handle the follow logic here.
-          console.log(`Following user: ${user.username}`);
-        }}
-        className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-6 w-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center border-2 border-black focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-black"
-        aria-label="Follow creator"
-      >
-        <Plus className="h-4 w-4" />
-      </button>
     </div>
   </div>
 );
@@ -230,6 +145,8 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   const [showHeart, setShowHeart] = useState(false);
   const tapTimeout = useRef<NodeJS.Timeout | null>(null);
   const heartAnimationTimeout = useRef<NodeJS.Timeout>();
+  const optionsMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const wasLongPress = useRef(false);
 
   const [isLiked, setIsLiked] = useState(item.isLiked || false);
   const [likeCount, setLikeCount] = useState(item.likes);
@@ -242,6 +159,9 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   const { toast } = useToast();
   const [quality, setQuality] = useState('Auto');
   const [isPipSupported, setIsPipSupported] = useState(false);
+  const [isOptionsDialogOpen, setIsOptionsDialogOpen] = useState(false);
+  const [isProductSheetOpen, setIsProductSheetOpen] = useState(false);
+
 
   // State and refs for pinch-to-zoom
   const [scale, setScale] = useState(1);
@@ -250,15 +170,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   const initialPinchDistanceRef = useRef(0);
   const wasGestureActiveRef = useRef(false);
   const lastScaleRef = useRef(1);
-  
-  // State and refs for playback speed control
-  const [playbackRate, setPlaybackRate] = useState(1.0);
-  const [showSpeedIndicator, setShowSpeedIndicator] = useState(false);
-  const speedChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const speedChangeIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const hideSpeedIndicatorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  const PLAYBACK_SPEEDS = [0.5, 1.0, 1.25, 1.5, 2.0];
   
   useEffect(() => {
     // Check for Picture-in-Picture support on the client
@@ -274,8 +185,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
       if (isActive) {
         video.play().catch(error => console.error("Video play failed:", error));
         setIsPlaying(true);
-        video.playbackRate = 1.0; // Always start new videos at 1x speed
-        setPlaybackRate(1.0);
       } else {
         video.pause();
         video.currentTime = 0;
@@ -291,9 +200,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     return () => {
       if (tapTimeout.current) clearTimeout(tapTimeout.current);
       if (heartAnimationTimeout.current) clearTimeout(heartAnimationTimeout.current);
-      if (speedChangeTimeoutRef.current) clearTimeout(speedChangeTimeoutRef.current);
-      if (speedChangeIntervalRef.current) clearInterval(speedChangeIntervalRef.current);
-      if (hideSpeedIndicatorTimeoutRef.current) clearTimeout(hideSpeedIndicatorTimeoutRef.current);
+      if (optionsMenuTimeoutRef.current) clearTimeout(optionsMenuTimeoutRef.current);
     };
   }, [isActive]);
 
@@ -371,63 +278,29 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     }, 800);
   };
   
-  const changeSpeed = (direction: 'increase' | 'decrease') => {
-    const currentIndex = PLAYBACK_SPEEDS.indexOf(playbackRate);
-    let nextIndex;
-    if (direction === 'increase') {
-        nextIndex = Math.min(currentIndex + 1, PLAYBACK_SPEEDS.length - 1);
-    } else {
-        nextIndex = Math.max(currentIndex - 1, 0);
-    }
-    const newRate = PLAYBACK_SPEEDS[nextIndex];
-
-    if (newRate !== playbackRate) {
-        setPlaybackRate(newRate);
-        if (videoRef.current) {
-            videoRef.current.playbackRate = newRate;
-        }
-    }
-    
-    setShowSpeedIndicator(true);
-    if (hideSpeedIndicatorTimeoutRef.current) {
-        clearTimeout(hideSpeedIndicatorTimeoutRef.current);
-    }
-  };
-
   const handlePointerDown = (e: React.PointerEvent) => {
     wasGestureActiveRef.current = false;
+    wasLongPress.current = false;
     pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     
     if (pointersRef.current.size === 1) {
         pointerStartRef.current = { x: e.clientX, y: e.clientY };
         
-        // Speed control logic on long press
-        if (scale === 1) { // Only when not zoomed
-            const target = e.currentTarget;
-            const rect = target.getBoundingClientRect();
-            const touchX = e.clientX - rect.left;
-            const direction = touchX > rect.width / 2 ? 'increase' : 'decrease';
-
-            speedChangeTimeoutRef.current = setTimeout(() => {
-                if (tapTimeout.current) {
-                    clearTimeout(tapTimeout.current);
-                    tapTimeout.current = null;
-                }
-                wasGestureActiveRef.current = true;
-                
-                changeSpeed(direction);
-
-                speedChangeIntervalRef.current = setInterval(() => {
-                    changeSpeed(direction);
-                }, 400);
-
-            }, 500); // Long press duration
-        }
+        // Long press for options menu
+        optionsMenuTimeoutRef.current = setTimeout(() => {
+            if (tapTimeout.current) {
+                clearTimeout(tapTimeout.current);
+                tapTimeout.current = null;
+            }
+            wasLongPress.current = true;
+            setIsOptionsDialogOpen(true);
+            if(isPlaying) togglePlay();
+        }, 500); // Long press duration
     }
     
     if (pointersRef.current.size === 2) {
         if (tapTimeout.current) clearTimeout(tapTimeout.current);
-        if (speedChangeTimeoutRef.current) clearTimeout(speedChangeTimeoutRef.current);
+        if (optionsMenuTimeoutRef.current) clearTimeout(optionsMenuTimeoutRef.current);
 
         const points = Array.from(pointersRef.current.values());
         initialPinchDistanceRef.current = getDistance(points[0] as any, points[1] as any);
@@ -438,11 +311,11 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!pointersRef.current.has(e.pointerId)) return;
 
-    if (pointerStartRef.current && speedChangeTimeoutRef.current) {
+    if (pointerStartRef.current && optionsMenuTimeoutRef.current) {
         const moveDistance = getDistance(pointerStartRef.current, { x: e.clientX, y: e.clientY });
         if (moveDistance > 10) {
-            clearTimeout(speedChangeTimeoutRef.current);
-            speedChangeTimeoutRef.current = null;
+            clearTimeout(optionsMenuTimeoutRef.current);
+            optionsMenuTimeoutRef.current = null;
         }
     }
 
@@ -479,20 +352,17 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   const handlePointerUp = (e: React.PointerEvent) => {
     pointersRef.current.delete(e.pointerId);
 
-    if (speedChangeTimeoutRef.current) {
-        clearTimeout(speedChangeTimeoutRef.current);
-        speedChangeTimeoutRef.current = null;
+    if (optionsMenuTimeoutRef.current) {
+        clearTimeout(optionsMenuTimeoutRef.current);
+        optionsMenuTimeoutRef.current = null;
     }
-    if (speedChangeIntervalRef.current) {
-        clearInterval(speedChangeIntervalRef.current);
-        speedChangeIntervalRef.current = null;
+    
+    if (wasLongPress.current) {
+        // Long press was handled, so we do nothing more.
+        if(pointersRef.current.size < 1) pointerStartRef.current = null;
+        return;
     }
-    if (showSpeedIndicator) {
-         hideSpeedIndicatorTimeoutRef.current = setTimeout(() => {
-            setShowSpeedIndicator(false);
-        }, 1000);
-    }
-
+    
     if (wasGestureActiveRef.current) {
         if (scale < 1.05) {
             setScale(1);
@@ -515,9 +385,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     
     const start = pointerStartRef.current;
     const end = { x: e.clientX, y: e.clientY };
-    const deltaX = Math.abs(end.x - start.x);
-    const deltaY = end.y - start.y;
-    const moveDistance = Math.sqrt(deltaX*deltaX + (end.y-start.y)*(end.y-start.y));
+    const moveDistance = getDistance(start, end);
 
     if (moveDistance < 10) {
       if (tapTimeout.current) {
@@ -530,12 +398,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
           tapTimeout.current = null;
         }, 300);
       }
-    } else if (deltaY < -40 && deltaX < 30) {
-        setIsCommentSheetOpen(true);
-        if (tapTimeout.current) {
-            clearTimeout(tapTimeout.current);
-            tapTimeout.current = null;
-        }
     }
     
     pointerStartRef.current = null;
@@ -560,6 +422,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         } else {
             await document.exitPictureInPicture();
         }
+        setIsOptionsDialogOpen(false);
     } catch (error) {
         console.error('PiP Error:', error);
         toast({
@@ -569,6 +432,14 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         });
     }
   };
+
+  const handleDownloadClick = () => {
+    toast({
+        title: "Download Started (Demo)",
+        description: "In a real app, the video would begin downloading.",
+    });
+    setIsOptionsDialogOpen(false);
+  }
 
 
   return (
@@ -593,12 +464,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         }}
       />
 
-      {showSpeedIndicator && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/20 pointer-events-none col-start-1 row-start-1">
-            <span className="text-white text-4xl font-bold drop-shadow-lg animate-pulse">{playbackRate.toFixed(2)}x</span>
-        </div>
-      )}
-
       {showHeart && (
           <Heart fill="white" className="h-24 w-24 text-white col-start-1 row-start-1 z-20 pointer-events-none animate-like-heart" />
       )}
@@ -619,14 +484,10 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
           isCommentSheetOpen={isCommentSheetOpen}
           setIsCommentSheetOpen={setIsCommentSheetOpen}
           videoOwnerId={item.user.id}
-          selectedQuality={quality}
-          onQualityChange={handleQualityChange}
           viewCount={item.views}
-          onPipClick={handlePipClick}
-          isPipSupported={isPipSupported}
       />
       
-      {!isPlaying && isActive && (
+      {(!isPlaying && isActive) && (
         <div className="absolute bottom-4 left-4 right-4 z-30 px-2" onClick={(e) => e.stopPropagation()}>
             <Slider
                 value={[videoProgress]}
@@ -639,6 +500,85 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
             />
         </div>
       )}
+
+      <Dialog open={isOptionsDialogOpen} onOpenChange={setIsOptionsDialogOpen}>
+        <DialogContent className="bg-black/80 border-white/20 text-white" onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle>Options</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-1">
+            <Button variant="ghost" className="justify-start text-base p-3 h-auto" onClick={handleDownloadClick}>
+                <Download className="mr-3 h-5 w-5" /> Download
+            </Button>
+
+            {isPipSupported && (
+                <Button variant="ghost" className="justify-start text-base p-3 h-auto" onClick={handlePipClick}>
+                    <PictureInPicture2 className="mr-3 h-5 w-5" /> Picture-in-Picture
+                </Button>
+            )}
+
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="justify-start text-base p-3 h-auto w-full">
+                        <Settings className="mr-3 h-5 w-5" /> Settings
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                    align="start"
+                    side="right"
+                    className="bg-black/70 border-white/30 text-white min-w-[120px]"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <DropdownMenuLabel>Quality</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup value={quality} onValueChange={handleQualityChange}>
+                        {['Auto', '1080p', '720p', '360p'].map((q) => (
+                        <DropdownMenuRadioItem key={q} value={q}>
+                            {q}
+                        </DropdownMenuRadioItem>
+                        ))}
+                    </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            {item.product && (
+                <Button variant="ghost" className="justify-start text-base p-3 h-auto" onClick={() => { setIsProductSheetOpen(true); setIsOptionsDialogOpen(false); }}>
+                    <ShoppingBag className="mr-3 h-5 w-5" /> Shop This Video
+                </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {item.product && (
+        <Sheet open={isProductSheetOpen} onOpenChange={setIsProductSheetOpen}>
+          <SheetContent
+            side="bottom"
+            className="h-auto max-h-[75%] bg-background text-foreground z-[70]"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <SheetHeader>
+              <SheetTitle className="text-center">Shop This Video</SheetTitle>
+            </SheetHeader>
+            <div className="py-4 flex flex-col items-center gap-4">
+              <div className="relative w-48 h-48 rounded-lg overflow-hidden border">
+                  <Image src={item.product.imageUrl} alt={item.product.name} fill className="object-cover" data-ai-hint="product image" />
+              </div>
+              <div className="text-center">
+                  <h3 className="text-xl font-semibold">{item.product.name}</h3>
+                  <p className="text-2xl font-bold text-primary">${item.product.price.toFixed(2)}</p>
+              </div>
+              <Button asChild size="lg" className="w-full max-w-sm font-bold">
+                  <a href={item.product.purchaseUrl} target="_blank" rel="noopener noreferrer">
+                      Buy Now
+                  </a>
+              </Button>
+              <p className="text-xs text-muted-foreground">You will be redirected to an external site to complete your purchase.</p>
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+
     </div>
   );
 }
