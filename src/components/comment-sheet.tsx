@@ -341,6 +341,11 @@ export function CommentSheet({
           return b.likes - a.likes;
         case 'oldest':
           return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'most-replied': {
+            const repliesA = repliesMap.get(a.id)?.length || 0;
+            const repliesB = repliesMap.get(b.id)?.length || 0;
+            return repliesB - repliesA;
+        }
         case 'newest':
         default:
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -565,12 +570,13 @@ export function CommentSheet({
               <DrawerTitle>{comments.length.toLocaleString()} Comments</DrawerTitle>
               <div className="absolute -top-1 right-0">
                   <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger className="w-[120px] h-9 text-xs" aria-label="Sort comments by">
+                      <SelectTrigger className="w-[140px] h-9 text-xs" aria-label="Sort comments by">
                           <SelectValue placeholder="Sort by..." />
                       </SelectTrigger>
                       <SelectContent>
                           <SelectItem value="newest">Newest</SelectItem>
                           <SelectItem value="top">Top</SelectItem>
+                          <SelectItem value="most-replied">Most Replied</SelectItem>
                           <SelectItem value="oldest">Oldest</SelectItem>
                       </SelectContent>
                   </Select>
