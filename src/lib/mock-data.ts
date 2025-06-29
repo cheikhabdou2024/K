@@ -9,6 +9,14 @@ export interface User {
   isVerified?: boolean;
 }
 
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string;
+  purchaseUrl: string;
+}
+
 export interface FirestoreUser extends User {
   email: string;
   bio: string;
@@ -41,6 +49,7 @@ export interface FirestorePost {
   comments: number;
   shares: number;
   views: number;
+  product?: Product;
   createdAt: Timestamp;
 }
 
@@ -48,6 +57,7 @@ export interface FirestorePost {
 export interface FeedItem extends Omit<FirestorePost, 'userId' | 'createdAt'> {
   user: User;
   isLiked?: boolean;
+  product?: Product;
   createdAt: { seconds: number; nanoseconds: number; }; // Replicate Timestamp structure for client
 }
 
@@ -165,6 +175,13 @@ export const mockFeedItems: FeedItem[] = [
     shares: 678,
     views: 543000,
     isLiked: true,
+    product: {
+      id: 'prod-1',
+      name: 'Glow Serum',
+      price: 49.99,
+      imageUrl: 'https://placehold.co/400x400.png',
+      purchaseUrl: 'https://example.com/shop/glow-serum'
+    },
     createdAt: { seconds: 1672531200, nanoseconds: 0 }
   },
   {

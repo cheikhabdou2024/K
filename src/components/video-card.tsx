@@ -1,10 +1,10 @@
 
 'use client';
 
-import type { FeedItem, User } from '@/lib/mock-data';
+import type { FeedItem, User, Product } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
-import { Heart, MessageCircle, Send, Play, Settings, Plus, Eye, PictureInPicture2 } from 'lucide-react';
+import { Heart, MessageCircle, Send, Play, Settings, Plus, Eye, PictureInPicture2, ShoppingBag } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { CommentSheet } from './comment-sheet';
@@ -18,13 +18,18 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import Image from 'next/image';
 
 
 interface VideoActionsProps {
-  item: {
-    comments: number;
-    shares: number;
-  };
+  item: FeedItem;
   isLiked: boolean;
   likeCount: number;
   handleLikeClick: (e: React.MouseEvent) => void;
@@ -43,6 +48,7 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
   const [formattedCommentCount, setFormattedCommentCount] = useState('');
   const [formattedShareCount, setFormattedShareCount] = useState('');
   const [formattedViewCount, setFormattedViewCount] = useState('');
+  const [isProductSheetOpen, setIsProductSheetOpen] = useState(false);
 
 
   useEffect(() => {
@@ -139,6 +145,46 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
           </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+      {item.product && (
+        <Sheet open={isProductSheetOpen} onOpenChange={setIsProductSheetOpen}>
+          <SheetTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
+              aria-label="View product"
+            >
+              <ShoppingBag className="h-8 w-8 text-white" />
+              <span className="text-xs">Shop</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent
+            side="bottom"
+            className="h-auto max-h-[75%] bg-background text-foreground z-[70]"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <SheetHeader>
+              <SheetTitle className="text-center">Shop This Video</SheetTitle>
+            </SheetHeader>
+            <div className="py-4 flex flex-col items-center gap-4">
+              <div className="relative w-48 h-48 rounded-lg overflow-hidden border">
+                  <Image src={item.product.imageUrl} alt={item.product.name} fill className="object-cover" data-ai-hint="product image" />
+              </div>
+              <div className="text-center">
+                  <h3 className="text-xl font-semibold">{item.product.name}</h3>
+                  <p className="text-2xl font-bold text-primary">${item.product.price.toFixed(2)}</p>
+              </div>
+              <Button asChild size="lg" className="w-full max-w-sm font-bold">
+                  <a href={item.product.purchaseUrl} target="_blank" rel="noopener noreferrer">
+                      Buy Now
+                  </a>
+              </Button>
+              <p className="text-xs text-muted-foreground">You will be redirected to an external site to complete your purchase.</p>
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 };
