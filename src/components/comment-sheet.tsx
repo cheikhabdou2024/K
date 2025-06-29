@@ -9,7 +9,7 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { Button } from './ui/button';
-import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark, Crown, CheckCircle2, Pin, MessageSquareReply, ChevronDown } from 'lucide-react';
+import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark, Crown, CheckCircle2, Pin, MessageSquareReply, ChevronDown, Smile } from 'lucide-react';
 import { mockComments, mockMe, type Comment as CommentType } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
@@ -117,16 +117,11 @@ const AudioPlayer = ({ audioUrl }: { audioUrl: string }) => {
 
 
 const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, isViewingUserCreator }: { comment: CommentType; onReply: (comment: CommentType) => void; videoOwnerId: string; isPinned: boolean; onPinComment: (id: string) => void; isViewingUserCreator: boolean; }) => {
-  const [reaction, setReaction] = useState<string | null>(null);
+  const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(comment.likes);
-  const [isPickerOpen, setPickerOpen] = useState(false);
-  const longPressTimer = useRef<NodeJS.Timeout>();
-  const isLongPress = useRef(false);
-  
   const [isBookmarked, setIsBookmarked] = useState(false);
   const { toast } = useToast();
 
-  const reactions = ['❤️', '😂', '🔥', '😮', '👍'];
   const isCommentOwnerCreator = videoOwnerId === comment.user.id;
   
   const handleBookmark = (e: React.MouseEvent) => {
@@ -139,38 +134,11 @@ const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, i
     });
   };
 
-  const handleReactionSelect = (newReaction: string) => {
-    if (reaction === newReaction) {
-      // Un-reacting
-      setReaction(null);
-      setLikeCount(l => l - 1);
-    } else if (reaction) {
-      // Changing reaction, like count stays the same
-      setReaction(newReaction);
-    } else {
-      // First time reacting
-      setReaction(newReaction);
-      setLikeCount(l => l + 1);
-    }
-    setPickerOpen(false);
-  };
-
-  const handlePointerDown = () => {
-    isLongPress.current = false;
-    longPressTimer.current = setTimeout(() => {
-      isLongPress.current = true;
-      setPickerOpen(true);
-    }, 500);
-  };
-
-  const handlePointerUp = () => {
-    clearTimeout(longPressTimer.current);
-  };
-
-  const handleClick = () => {
-    if (!isLongPress.current) {
-      handleReactionSelect('❤️'); // Default to a heart on short click
-    }
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newIsLiked = !isLiked;
+    setIsLiked(newIsLiked);
+    setLikeCount(prev => prev + (newIsLiked ? 1 : -1));
   };
 
   return (
@@ -231,32 +199,12 @@ const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, i
         </div>
       </div>
       <div className="flex flex-col items-center gap-0.5">
-        <Popover open={isPickerOpen} onOpenChange={setPickerOpen}>
-            <PopoverTrigger asChild>
-                <button
-                    onPointerDown={handlePointerDown}
-                    onPointerUp={handlePointerUp}
-                    onClick={handleClick}
-                    onContextMenu={(e) => e.preventDefault()}
-                    className="h-8 w-8 flex items-center justify-center rounded-full transition-transform active:scale-125 focus:outline-none"
-                >
-                    {reaction ? (
-                        <span className="text-xl transform transition-transform hover:scale-125">{reaction}</span>
-                    ) : (
-                        <Heart className={cn('h-4 w-4 text-muted-foreground')} />
-                    )}
-                </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-1 rounded-full bg-background/80 backdrop-blur-sm border-border shadow-lg">
-                <div className="flex gap-1">
-                    {reactions.map(r => (
-                        <button key={r} onClick={() => handleReactionSelect(r)} className="p-1.5 rounded-full hover:bg-muted text-xl transition-transform hover:scale-125 focus:outline-none">
-                            {r}
-                        </button>
-                    ))}
-                </div>
-            </PopoverContent>
-        </Popover>
+        <button
+            onClick={handleLike}
+            className="h-8 w-8 flex items-center justify-center rounded-full transition-transform active:scale-125 focus:outline-none"
+        >
+            <Heart className={cn('h-4 w-4 text-muted-foreground transition-colors', isLiked && 'fill-red-500 text-red-500')} />
+        </button>
         <span className="text-xs text-muted-foreground">{likeCount > 0 ? likeCount.toLocaleString() : ''}</span>
         <button onClick={handleBookmark} className="h-8 w-8 flex items-center justify-center rounded-full mt-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Bookmark className={cn('h-4 w-4 text-muted-foreground transition-colors', isBookmarked && 'fill-primary text-primary')} />
@@ -287,6 +235,25 @@ const AnimatedSoundWave = () => (
         `}</style>
     </div>
 )
+
+const emojiCategories = [
+  {
+    name: 'Smileys & People',
+    emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '👽', '👾', '🤖', '🎃', '👋', '🤚', '🖐️', '🖖', '👌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '👍', '👎', '✊', '👊', '👏', '🙌', '🙏', '✍️', '💅', '🤳', '💪', '🦵', '🦶', '👂', '👃', '👀', '👁️', '👅', '👄', '❤️', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟'],
+  },
+  {
+    name: 'Animals & Nature',
+    emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦦', '🦥', '🐁', '🐀', '🐿️', '🌵', '🎄', '🌲', '🌳', '🌴', '🌱', '🌿', '☘️', '🍀', '🎍', '🎋', '🍃', '🍂', '🍁', '🍄', '🌾', '💐', '🌷', '🌹', '🥀', '🌺', '🌸', '🌼', '🌻', '🌞', '🌕', '🌖', '🌗', '🌘', '🌑', '🌒', '🌓', '🌔', '🌚', '🌝', '🌛', '🌜', '⭐', '🌟', '💫', '✨', '☄️', '🪐', '🔥', '💧', '🌊'],
+  },
+  {
+    name: 'Food & Drink',
+    emojis: ['🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🌽', '🥕', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '핫도그', '🍔', '🍟', '🍕', '🥪', '🥙', '🧆', '🌮', '🌯', '🥗', '🥘', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '☕', '🍵', '🧃', '🥤', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🧊'],
+  },
+  {
+      name: 'Objects',
+      emojis: ['⌚', '📱', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🗑️', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '🧾', '💎', '⚖️', '🦯', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '🛡️', '🚬', '⚰️', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🧺', '🧻', '🚽', '🚰', '🚿', '🛁', '🛀', '🧼', '🪒', '🧽', '🧴', '🔑', '🗝️', '🛋️', '🪑', '🛌', '🛏️', '🚪', '🪞', '🪟', '🧳', '🖼️', '🧭', '🗺️', '⛱️', '🗿', '🎈', '🎉', '🎊', '🎁', '🎀', '🧧', '💌', '📮', '🗳️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '💼', '📁', '📂', '📅', '📆', '🗒️', '📈', '📉', '📊', '📋', '📌', '📎', '📏', '📐', '✂️', '🗃️', '🗄️', '🗑️']
+  }
+];
 
 
 export function CommentSheet({
@@ -357,7 +324,6 @@ export function CommentSheet({
         replies: (repliesMap.get(thread.id) || []).sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
     }));
     
-    // Pinning logic
     if (!pinnedCommentId) return populatedThreads;
     
     const pinnedThreadIndex = populatedThreads.findIndex(t => t.id === pinnedCommentId);
@@ -393,7 +359,6 @@ export function CommentSheet({
         const newSet = new Set(prev);
         if (newSet.has(threadId)) {
             newSet.delete(threadId);
-            // Also collapse fully expanded view when hiding replies
             setFullyExpandedThreads(fullPrev => {
                 const fullNewSet = new Set(fullPrev);
                 fullNewSet.delete(threadId);
@@ -675,13 +640,45 @@ export function CommentSheet({
                     <AvatarImage src={mockMe.avatarUrl} />
                     <AvatarFallback>{mockMe.name.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <Input 
-                  placeholder="Add a comment..." 
-                  className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-ring" 
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  disabled={isSending}
-                />
+                <div className="flex-1 relative flex items-center">
+                    <Input 
+                        placeholder="Add a comment..." 
+                        className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-ring pr-10" 
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        disabled={isSending}
+                    />
+                     <Popover>
+                        <PopoverTrigger asChild>
+                            <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full text-muted-foreground hover:text-primary">
+                                <Smile className="h-5 w-5" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 h-96 p-0 mb-2">
+                            <ScrollArea className="h-full">
+                                <div className="p-2">
+                                {emojiCategories.map(category => (
+                                    <div key={category.name}>
+                                        <h3 className="text-sm font-semibold text-muted-foreground px-2 py-1">{category.name}</h3>
+                                        <div className="grid grid-cols-8 gap-1">
+                                            {category.emojis.map(emoji => (
+                                                <button
+                                                    key={emoji}
+                                                    type="button"
+                                                    className="text-2xl rounded-md hover:bg-muted p-1 transition-colors"
+                                                    onClick={() => setCommentText(prev => prev + emoji)}
+                                                >
+                                                    {emoji}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                                </div>
+                            </ScrollArea>
+                        </PopoverContent>
+                    </Popover>
+                </div>
                 {commentText.trim() ? (
                     <Button type="submit" size="icon" variant="ghost" className="bg-transparent rounded-full" disabled={isSending}>
                         {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 text-primary" />}
