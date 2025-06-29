@@ -21,11 +21,6 @@ import { useState, useRef, useEffect } from 'react';
 import { Loader2, UploadCloud, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
-import { db, storage } from '@/lib/firebase';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import type { FirestorePost } from '@/lib/mock-data';
 
 const FormSchema = z.object({
   caption: z.string().min(10, {
@@ -49,7 +44,6 @@ const fileToDataUri = (file: File) =>
 export default function CreatePage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { user: authUser } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
@@ -64,16 +58,13 @@ export default function CreatePage() {
   });
 
   useEffect(() => {
-    if (!authUser) {
-      router.replace('/login?from=create');
-    }
     // Clean up the object URL to avoid memory leaks
     return () => {
       if (videoPreview) {
         URL.revokeObjectURL(videoPreview);
       }
     };
-  }, [videoPreview, authUser, router]);
+  }, [videoPreview, router]);
 
   const handleFileChange = (file: File | null) => {
     if (videoPreview) {
@@ -131,11 +122,6 @@ export default function CreatePage() {
       });
       return;
     }
-    if (!authUser) {
-        toast({ variant: 'destructive', title: 'Not authenticated', description: 'You must be logged in to post.' });
-        router.push('/login');
-        return;
-    }
 
     setIsSubmitting(true);
     try {
@@ -153,42 +139,20 @@ export default function CreatePage() {
         return;
       }
       
-      toast({ title: 'Content is safe!', description: 'Now uploading your post...' });
-
-      // 2. Upload video to Firebase Storage
-      const newPostRef = doc(collection(db, 'posts'));
-      const videoStorageRef = ref(storage, `videos/${authUser.uid}/${newPostRef.id}`);
-      await uploadBytes(videoStorageRef, videoFile);
-      const videoUrl = await getDownloadURL(videoStorageRef);
-
-      // 3. Create post document in Firestore
-      // For a real app, you'd generate a thumbnail on the backend. Here we use a placeholder.
-      const thumbnailUrl = `https://placehold.co/480x854.png`; 
-
-      const newPost: Omit<FirestorePost, 'createdAt'> & { createdAt: any } = {
-        id: newPostRef.id,
-        userId: authUser.uid,
-        videoUrl,
-        thumbnailUrl,
-        caption: data.caption,
-        sound: { id: `sound-${newPostRef.id}`, title: 'Original Sound' },
-        likes: 0,
-        comments: 0,
-        shares: 0,
-        createdAt: serverTimestamp(),
-      };
+      toast({ title: 'Content is safe!', description: 'Simulating post upload...' });
       
-      await setDoc(newPostRef, newPost);
+      // Simulate upload process
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       toast({
-        title: 'Post Successful!',
-        description: 'Your video is now live.',
+        title: 'Post Successful! (Demo)',
+        description: 'Your video would be live in a real app.',
       });
 
       // 4. Reset form and navigate
       form.reset();
       handleFileChange(null);
-      router.push('/profile');
+      router.push('/');
 
     } catch (error) {
       console.error("Error creating post:", error);

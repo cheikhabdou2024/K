@@ -9,11 +9,10 @@ import {
   CarouselItem,
 } from '@/components/ui/carousel';
 import { VideoCard } from '@/components/video-card';
-import { type FeedItem, type FirestorePost, type User } from '@/lib/mock-data';
+import { mockFeedItems, type FeedItem } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, doc, getDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
+
 
 const LoadingScreen = () => (
   <div className="h-full w-full bg-black flex flex-col items-center justify-center text-white gap-4">
@@ -22,6 +21,7 @@ const LoadingScreen = () => (
   </div>
 );
 
+
 export default function Home() {
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(0);
@@ -29,36 +29,11 @@ export default function Home() {
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
-    const fetchPosts = async () => {
-      setIsLoading(true);
-      try {
-        const postsQuery = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
-        const querySnapshot = await getDocs(postsQuery);
-
-        const postsData = querySnapshot.docs.map(doc => ({ ...doc.data() as FirestorePost, id: doc.id }));
-
-        const feedItemsWithUsers: FeedItem[] = await Promise.all(
-          postsData.map(async (post) => {
-            const userDoc = await getDoc(doc(db, 'users', post.userId));
-            const user = userDoc.data() as User;
-            // Convert Firestore Timestamp to a plain object for client-side compatibility
-            const createdAt = {
-                seconds: post.createdAt.seconds,
-                nanoseconds: post.createdAt.nanoseconds,
-            };
-            return { ...post, user, createdAt };
-          })
-        );
-        
-        setFeedItems(feedItemsWithUsers);
-      } catch (error) {
-        console.error("Error fetching feed:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPosts();
+    // Simulate fetching data
+    setTimeout(() => {
+      setFeedItems(mockFeedItems);
+      setIsLoading(false);
+    }, 500);
   }, []);
 
   const onScroll = React.useCallback((api: CarouselApi) => {

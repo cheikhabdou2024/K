@@ -76,6 +76,40 @@ const users: User[] = [
   { id: 'user-4', name: 'Mia Wong', username: 'miawong', avatarUrl: 'https://placehold.co/100x100.png' },
 ];
 
+export const mockMe: FirestoreUser = {
+  id: 'user-1',
+  name: 'Jane Doe',
+  username: 'janedoe',
+  email: 'jane.doe@example.com',
+  avatarUrl: 'https://placehold.co/100x100.png',
+  bio: 'Just a girl who loves to create and share videos! Follow for daily fun. 💃',
+  stats: {
+    following: 120,
+    followers: 18500,
+    likes: 345000,
+  },
+  analytics: {
+    profileViews: [
+      { day: 'Mon', views: 230 },
+      { day: 'Tue', views: 345 },
+      { day: 'Wed', views: 450 },
+      { day: 'Thu', views: 380 },
+      { day: 'Fri', views: 560 },
+      { day: 'Sat', views: 780 },
+      { day: 'Sun', views: 650 },
+    ],
+    monthlyLikes: [
+      { month: 'Jan', likes: 12000 },
+      { month: 'Feb', likes: 18000 },
+      { month: 'Mar', likes: 25000 },
+      { month: 'Apr', likes: 31000 },
+      { month: 'May', likes: 29000 },
+      { month: 'Jun', likes: 42000 },
+    ],
+  },
+};
+
+
 export const mockFeedItems: FeedItem[] = [
   {
     id: '1',

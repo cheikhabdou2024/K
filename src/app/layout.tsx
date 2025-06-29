@@ -3,7 +3,6 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { BottomNav } from '@/components/bottom-nav';
-import { AuthProvider } from '@/contexts/auth-context';
 
 export const metadata: Metadata = {
   title: 'FlipTok',
@@ -24,11 +23,9 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn('font-body antialiased', 'bg-background text-foreground', 'h-[100dvh] flex flex-col')}>
-        <AuthProvider>
           <main className="flex-1 min-h-0">{children}</main>
           <BottomNav />
           <Toaster />
-        </AuthProvider>
       </body>
     </html>
   );

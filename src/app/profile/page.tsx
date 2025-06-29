@@ -1,27 +1,20 @@
 
-// src/app/profile/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
-import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
-import { signOut } from 'firebase/auth';
-import { db, auth } from '@/lib/firebase';
-import type { FirestoreUser, FeedItem, FirestorePost } from '@/lib/mock-data';
-
+import { mockFeedItems, mockMe, type FeedItem, type FirestoreUser } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Video, Settings, Edit, Share2, Heart, LineChart, LogOut } from 'lucide-react';
+import { Video, Settings, Edit, Share2, Heart, LineChart, LogOut } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { useToast } from '@/hooks/use-toast';
-
 
 const ProfileHeader = ({ user, onSignOut }: { user: FirestoreUser, onSignOut: () => void }) => {
   const followers = user.stats.followers > 1000 ? `${(user.stats.followers/1000).toFixed(1)}k` : user.stats.followers;
@@ -196,7 +189,6 @@ const LoadingSkeleton = () => (
 )
 
 export default function ProfilePage() {
-  const { user: authUser, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [userData, setUserData] = useState<FirestoreUser | null>(null);
@@ -204,82 +196,34 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (authLoading) return;
-      if (!authUser) {
-        setLoading(false);
-        return;
-      }
-
-      try {
+    const fetchUserData = () => {
         setLoading(true);
-        // Fetch user profile
-        const userDocRef = doc(db, 'users', authUser.uid);
-        const userDoc = await getDoc(userDocRef);
+        // Using mock data for the profile
+        const myProfileData = mockMe;
+        setUserData(myProfileData);
         
-        if (userDoc.exists()) {
-          const fetchedUserData = userDoc.data() as FirestoreUser;
-          setUserData(fetchedUserData);
-          
-          // Fetch user's posts
-          const postsQuery = query(collection(db, 'posts'), where('userId', '==', authUser.uid), orderBy('createdAt', 'desc'));
-          const postsSnapshot = await getDocs(postsQuery);
-          const postsData = postsSnapshot.docs.map(doc => {
-              const post = doc.data() as FirestorePost;
-              // Convert Firestore Timestamp to a plain object
-              const createdAt = {
-                  seconds: post.createdAt.seconds,
-                  nanoseconds: post.createdAt.nanoseconds,
-              };
-              return { ...post, user: fetchedUserData, createdAt };
-          });
-          setUserVideos(postsData);
+        // Filter mock feed items to get videos for this user
+        const myVideos = mockFeedItems.filter(item => item.user.id === myProfileData.id);
+        setUserVideos(myVideos);
 
-        } else {
-          toast({ variant: 'destructive', title: 'Error', description: 'User profile not found.' });
-          router.push('/signup');
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch profile data.' });
-      } finally {
         setLoading(false);
-      }
     };
 
     fetchUserData();
-  }, [authUser, authLoading, router, toast]);
+  }, []);
 
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      toast({ title: 'Signed Out', description: 'You have been successfully signed out.' });
-      router.push('/login');
-    } catch (error) {
-       toast({ variant: 'destructive', title: 'Error', description: 'Failed to sign out.' });
-    }
+  const handleSignOut = () => {
+    toast({ title: 'Signed Out', description: 'This is a demo action.' });
+    router.push('/');
   }
 
-  if (loading || authLoading) {
+  if (loading) {
     return <LoadingSkeleton />;
   }
 
-  if (!authUser) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center gap-4 text-center">
-        <User className="h-16 w-16 text-muted-foreground" />
-        <h2 className="text-2xl font-bold font-headline">Your Profile Awaits</h2>
-        <p className="text-muted-foreground max-w-xs">Log in or sign up to view your profile, share content, and connect with others.</p>
-        <div className="flex gap-4">
-          <Button asChild><Link href="/login">Log In</Link></Button>
-          <Button variant="outline" asChild><Link href="/signup">Sign Up</Link></Button>
-        </div>
-      </div>
-    );
-  }
-
   if (!userData) {
-      return <LoadingSkeleton />;
+    // This case should ideally not be reached with mock data
+    return <div>User not found</div>
   }
 
   return (
