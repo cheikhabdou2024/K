@@ -134,7 +134,7 @@ const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, i
     });
   };
 
-  const handleLike = (e: React.MouseEvent) => {
+  const handleLikeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     const newIsLiked = !isLiked;
     setIsLiked(newIsLiked);
@@ -200,7 +200,7 @@ const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, i
       </div>
       <div className="flex flex-col items-center gap-0.5">
         <button
-            onClick={handleLike}
+            onClick={handleLikeClick}
             className="h-8 w-8 flex items-center justify-center rounded-full transition-transform active:scale-125 focus:outline-none"
         >
             <Heart className={cn('h-4 w-4 text-muted-foreground transition-colors', isLiked && 'fill-red-500 text-red-500')} />
@@ -250,8 +250,8 @@ const emojiCategories = [
     emojis: ['🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🌽', '🥕', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '핫도그', '🍔', '🍟', '🍕', '🥪', '🥙', '🧆', '🌮', '🌯', '🥗', '🥘', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '☕', '🍵', '🧃', '🥤', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🧊'],
   },
   {
-      name: 'Objects',
-      emojis: ['⌚', '📱', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🗑️', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '🧾', '💎', '⚖️', '🦯', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '🛡️', '🚬', '⚰️', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🧺', '🧻', '🚽', '🚰', '🚿', '🛁', '🛀', '🧼', '🪒', '🧽', '🧴', '🔑', '🗝️', '🛋️', '🪑', '🛌', '🛏️', '🚪', '🪞', '🪟', '🧳', '🖼️', '🧭', '🗺️', '⛱️', '🗿', '🎈', '🎉', '🎊', '🎁', '🎀', '🧧', '💌', '📮', '🗳️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '💼', '📁', '📂', '📅', '📆', '🗒️', '📈', '📉', '📊', '📋', '📌', '📎', '📏', '📐', '✂️', '🗃️', '🗄️', '🗑️']
+    name: 'Objects',
+    emojis: ['⌚', '📱', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🗑️', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '🧾', '💎', '⚖️', '🦯', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '🛡️', '🚬', '⚰️', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🧺', '🧻', '🚽', '🚰', '🚿', '🛁', '🛀', '🧼', '🪒', '🧽', '🧴', '🔑', '🗝️', '🛋️', '🪑', '🛌', '🛏️', '🚪', '🪞', '🪟', '🧳', '🖼️', '🗺️', '⛱️', '🗿', '🎈', '🎉', '🎊', '🎁', '🎀', '🧧', '💌', '📮', '🗳️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '💼', '📁', '📂', '📅', '📆', '🗒️', '📈', '📉', '📊', '📋', '📌', '📎', '📏', '📐', '✂️', '🗃️', '🗄️']
   }
 ];
 
@@ -661,9 +661,9 @@ export function CommentSheet({
                                     <div key={category.name}>
                                         <h3 className="text-sm font-semibold text-muted-foreground px-2 py-1">{category.name}</h3>
                                         <div className="grid grid-cols-8 gap-1">
-                                            {category.emojis.map(emoji => (
+                                            {category.emojis.map((emoji, index) => (
                                                 <button
-                                                    key={emoji}
+                                                    key={`${category.name}-${index}`}
                                                     type="button"
                                                     className="text-2xl rounded-md hover:bg-muted p-1 transition-colors"
                                                     onClick={() => setCommentText(prev => prev + emoji)}
