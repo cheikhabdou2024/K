@@ -52,7 +52,8 @@ export interface FeedItem extends Omit<FirestorePost, 'userId' | 'createdAt'> {
 export interface Comment {
   id:string;
   user: User;
-  text: string;
+  text?: string;
+  audioUrl?: string;
   timestamp: string;
   likes: number;
 }

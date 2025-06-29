@@ -7,16 +7,98 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Button } from './ui/button';
-import { Heart, Send, Loader2 } from 'lucide-react';
+import { Heart, Send, Loader2, Mic, Trash2, Play, Pause } from 'lucide-react';
 import { mockComments, mockMe, type Comment as CommentType } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { scanCommentAction } from '@/app/comments/actions';
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
+
+const AudioPlayer = ({ audioUrl }: { audioUrl: string }) => {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  const togglePlayPause = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateProgress = () => {
+      setProgress((audio.currentTime / audio.duration) * 100 || 0);
+    };
+    const handleEnded = () => {
+        setIsPlaying(false);
+        setProgress(0);
+    };
+
+    audio.addEventListener('timeupdate', updateProgress);
+    audio.addEventListener('ended', handleEnded);
+    return () => {
+      audio.removeEventListener('timeupdate', updateProgress);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, []);
+
+  const SoundWave = () => (
+    <svg width="100" height="24" viewBox="0 0 100 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="2" y1="10" x2="2" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="6" y1="8" x2="6" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="10" y1="10" x2="10" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="14" y1="6" x2="14" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="18" y1="11" x2="18" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="22" y1="8" x2="22" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="26" y1="4" x2="26" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="30" y1="10" x2="30" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="34" y1="8" x2="34" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="38" y1="6" x2="38" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="42" y1="11" x2="42" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="46" y1="4" x2="46" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="50" y1="8" x2="50" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="54" y1="10" x2="54" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="58" y1="6" x2="58" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="62" y1="8" x2="62" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="66" y1="4" x2="66" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="70" y1="11" x2="70" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="74" y1="6" x2="74" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="78" y1="10" x2="78" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="82" y1="8" x2="82" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="86" y1="4" x2="86" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="90" y1="8" x2="90" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="94" y1="10" x2="94" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <line x1="98" y1="10" x2="98" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+
+  return (
+    <div className="flex items-center gap-2 p-1.5 pr-3 rounded-full bg-primary/10 w-fit">
+      <audio ref={audioRef} src={audioUrl} preload="metadata" />
+      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90" onClick={togglePlayPause}>
+        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+      </Button>
+      <div className="relative w-[100px] h-[24px]">
+        <div className="absolute inset-0 text-primary/30"><SoundWave /></div>
+        <div className="absolute inset-0 h-full overflow-hidden text-primary" style={{ width: `${progress}%` }}><SoundWave /></div>
+      </div>
+    </div>
+  );
+};
+
 
 const CommentItem = ({ comment }: { comment: CommentType }) => {
   const [isLiked, setIsLiked] = useState(false);
@@ -35,8 +117,11 @@ const CommentItem = ({ comment }: { comment: CommentType }) => {
       </Avatar>
       <div className="flex-1">
         <p className="text-xs text-muted-foreground">@{comment.user.username}</p>
-        <p className="text-sm">{comment.text}</p>
-        <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+        <div className="text-sm bg-muted p-3 rounded-xl rounded-tl-none w-fit max-w-full">
+            {comment.text && <p>{comment.text}</p>}
+            {comment.audioUrl && <AudioPlayer audioUrl={comment.audioUrl} />}
+        </div>
+        <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground px-2">
           <span>{comment.timestamp}</span>
           <button className="font-semibold hover:underline">Reply</button>
         </div>
@@ -51,6 +136,23 @@ const CommentItem = ({ comment }: { comment: CommentType }) => {
   );
 };
 
+const AnimatedSoundWave = () => (
+    <div className="flex items-center gap-0.5 h-4">
+        {Array.from({length: 7}).map((_, i) => (
+            <div key={i} className="w-0.5 bg-primary/80" style={{ animation: `sound-wave 1.2s ease-in-out infinite`, animationDelay: `${i * 0.1}s`, height: '100%' }}></div>
+        ))}
+        <style jsx>{`
+            @keyframes sound-wave {
+                0% { transform: scaleY(0.3); }
+                25% { transform: scaleY(1); }
+                50% { transform: scaleY(0.4); }
+                75% { transform: scaleY(0.8); }
+                100% { transform: scaleY(0.3); }
+            }
+        `}</style>
+    </div>
+)
+
 
 export function CommentSheet({
   commentCount,
@@ -64,20 +166,105 @@ export function CommentSheet({
   const [isSending, setIsSending] = useState(false);
   const [commentText, setCommentText] = useState('');
 
-  const handleSend = async () => {
-    if (!commentText.trim()) return;
+  // Audio recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const formatTime = (time: number) => new Date(time * 1000).toISOString().substr(14, 5);
+
+  const cleanupRecording = () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+      setIsPaused(false);
+      setRecordingTime(0);
+      audioChunksRef.current = [];
+  }
+
+  const handleStartRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        handleSend({ audioUrl });
+        stream.getTracks().forEach(track => track.stop()); // Stop microphone access
+      };
+      
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Microphone access denied',
+        description: 'Please allow microphone access in your browser settings.',
+      });
+    }
+  };
+  
+  const handlePauseRecording = () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.pause();
+          setIsPaused(true);
+          if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      }
+  }
+
+  const handleResumeRecording = () => {
+       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'paused') {
+          mediaRecorderRef.current.resume();
+          setIsPaused(false);
+          recordingTimerRef.current = setInterval(() => {
+            setRecordingTime(prev => prev + 1);
+          }, 1000);
+      }
+  }
+
+  const handleStopAndSend = () => {
+      setIsSending(true);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (mediaRecorderRef.current?.state !== 'inactive') {
+          mediaRecorderRef.current?.stop();
+      }
+  }
+  
+  const handleCancelRecording = () => {
+      cleanupRecording();
+  }
+  
+  const handleSend = async ({ text, audioUrl }: { text?: string; audioUrl?: string }) => {
+    if (!text?.trim() && !audioUrl) return;
     setIsSending(true);
 
     try {
-      const result = await scanCommentAction(commentText);
+      const scanContent = text || audioUrl || '';
+      const result = await scanCommentAction(scanContent);
 
       if (result.isSafe) {
         const newComment: CommentType = {
           id: `comment-${Date.now()}`,
           user: mockMe,
           timestamp: 'Just now',
-          text: commentText,
           likes: 0,
+          ...(text && { text }),
+          ...(audioUrl && { audioUrl }),
         };
         setComments(prev => [newComment, ...prev]);
         setCommentText('');
@@ -96,24 +283,21 @@ export function CommentSheet({
       });
     } finally {
       setIsSending(false);
+      cleanupRecording();
     }
   };
   
   const handleFormSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      handleSend();
+      handleSend({ text: commentText });
   }
 
   return (
     <Sheet>
       <SheetTrigger asChild>{children}</SheetTrigger>
-      <SheetContent
-        side="bottom"
-        className="h-[60%] flex flex-col rounded-t-2xl p-0"
-      >
+      <SheetContent side="bottom" className="h-[60%] flex flex-col rounded-t-2xl p-0">
         <div className="text-center py-4 relative">
           <p className="font-semibold">{comments.length.toLocaleString()} Comments</p>
-          {/* The close button is already part of SheetContent */}
         </div>
         <Separator />
         <ScrollArea className="flex-1 my-2">
@@ -125,7 +309,24 @@ export function CommentSheet({
         </ScrollArea>
         <Separator />
         <div className="p-4 bg-background">
-            <form onSubmit={handleFormSubmit} className="flex items-center gap-2">
+          {isRecording ? (
+            <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={handleCancelRecording} className="text-destructive hover:bg-destructive/10 rounded-full">
+                    <Trash2 className="h-5 w-5"/>
+                </Button>
+                <div className="flex-1 bg-muted rounded-full h-10 flex items-center justify-between px-4">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-primary" onClick={isPaused ? handleResumeRecording : handlePauseRecording}>
+                        {isPaused ? <Mic className="h-4 w-4" /> : <Pause className="h-4 w-4 fill-current" />}
+                    </Button>
+                    {isPaused ? <p className="text-sm text-muted-foreground">Paused</p> : <AnimatedSoundWave />}
+                    <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>
+                </div>
+                <Button size="icon" onClick={handleStopAndSend} disabled={isSending} className="bg-primary rounded-full">
+                    {isSending ? <Loader2 className="animate-spin" /> : <Send className="h-5 w-5" />}
+                </Button>
+            </div>
+          ) : (
+             <form onSubmit={handleFormSubmit} className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
                     <AvatarImage src={mockMe.avatarUrl} />
                     <AvatarFallback>{mockMe.name.charAt(0)}</AvatarFallback>
@@ -137,15 +338,17 @@ export function CommentSheet({
                   onChange={(e) => setCommentText(e.target.value)}
                   disabled={isSending}
                 />
-                <Button 
-                    type="submit" 
-                    size="icon" 
-                    variant="ghost"
-                    className="bg-transparent" 
-                    disabled={isSending || !commentText.trim()}>
-                    {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 text-primary" />}
-                </Button>
+                {commentText.trim() ? (
+                    <Button type="submit" size="icon" variant="ghost" className="bg-transparent rounded-full" disabled={isSending}>
+                        {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 text-primary" />}
+                    </Button>
+                ) : (
+                     <Button type="button" size="icon" variant="ghost" className="bg-transparent rounded-full" onClick={handleStartRecording} disabled={isSending}>
+                        {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Mic className="h-5 w-5 text-primary" />}
+                    </Button>
+                )}
             </form>
+          )}
         </div>
       </SheetContent>
     </Sheet>
