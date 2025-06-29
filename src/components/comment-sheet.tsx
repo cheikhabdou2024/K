@@ -9,7 +9,7 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { Button } from './ui/button';
-import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark, Crown, CheckCircle2, Pin, MessageSquareReply, ChevronDown, Smile } from 'lucide-react';
+import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark, Crown, CheckCircle2, Pin, MessageSquareReply, ChevronDown, Smile, Sparkles } from 'lucide-react';
 import { mockComments, mockMe, type Comment as CommentType } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
@@ -154,13 +154,19 @@ const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, i
             <span>Pinned by Creator</span>
           </div>
         )}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
             <p className="text-xs text-muted-foreground">@{comment.user.username}</p>
             {isCommentOwnerCreator && (
                 <Crown className="h-3.5 w-3.5 text-yellow-500 fill-yellow-400" />
             )}
             {comment.user.isVerified && !isCommentOwnerCreator && (
                 <CheckCircle2 className="h-3.5 w-3.5 text-sky-500 fill-sky-400" />
+            )}
+            {comment.isFirstTimeCommenter && (
+                <div className="flex items-center gap-1 text-xs bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded-full">
+                    <Sparkles className="h-3 w-3" />
+                    <span>First Comment!</span>
+                </div>
             )}
         </div>
         <div className="text-sm bg-muted p-3 rounded-xl rounded-tl-none w-fit max-w-full">

@@ -60,6 +60,7 @@ export interface Comment {
   replyTo?: User;
   parentId?: string;
   replies?: Comment[];
+  isFirstTimeCommenter?: boolean;
 }
 
 export interface Story {
@@ -186,7 +187,7 @@ export const mockComments: Comment[] = [
     { id: 'reply-1-2', user: users[3], text: "Where was this taken?", createdAt: new Date("2024-07-22T10:05:00Z"), likes: 25, parentId: 'comment-1', replyTo: users[2] },
     { id: 'reply-1-3', user: users[1], text: "Seriously, need the location ASAP!", createdAt: new Date("2024-07-22T10:08:00Z"), likes: 18, parentId: 'comment-1', replyTo: users[3] },
     { id: 'reply-1-4', user: users[2], text: "It's from my trip to the Amalfi Coast! Highly recommend.", createdAt: new Date("2024-07-22T10:15:00Z"), likes: 50, parentId: 'comment-1', replyTo: users[3] },
-    { id: 'comment-2', user: users[3], text: "Great content, _keep it up_!", createdAt: new Date("2024-07-22T11:00:00Z"), likes: 88 },
+    { id: 'comment-2', user: users[3], text: "Great content, _keep it up_!", createdAt: new Date("2024-07-22T11:00:00Z"), likes: 88, isFirstTimeCommenter: true },
     {
         id: 'comment-audio',
         user: users[1],
