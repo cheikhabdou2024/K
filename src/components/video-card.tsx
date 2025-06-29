@@ -53,19 +53,21 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
 
   useEffect(() => {
     // This effect runs only on the client, after hydration,
-    // so it's safe to use locale-specific formatting.
-    setFormattedLikeCount(likeCount.toLocaleString());
-    setFormattedCommentCount(item.comments.toLocaleString());
-    setFormattedShareCount(item.shares.toLocaleString());
-
+    // to safely use locale-specific formatting and avoid hydration mismatches.
     try {
       const formatter = new Intl.NumberFormat('en-US', {
         notation: 'compact',
         maximumFractionDigits: 1,
       });
+      setFormattedLikeCount(formatter.format(likeCount));
+      setFormattedCommentCount(formatter.format(item.comments));
+      setFormattedShareCount(formatter.format(item.shares));
       setFormattedViewCount(formatter.format(viewCount));
     } catch (e) {
-      // Fallback for older environments
+      // Fallback for older environments that may not support the notation option.
+      setFormattedLikeCount(likeCount.toLocaleString());
+      setFormattedCommentCount(item.comments.toLocaleString());
+      setFormattedShareCount(item.shares.toLocaleString());
       setFormattedViewCount(viewCount.toLocaleString());
     }
   }, [likeCount, item.comments, item.shares, viewCount]);
@@ -599,5 +601,3 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     </div>
   );
 }
-
-    
