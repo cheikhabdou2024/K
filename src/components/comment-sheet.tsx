@@ -209,7 +209,16 @@ const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, i
               )}>
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
-                  components={{ p: ({node, ...props}) => <p className="m-0" {...props} /> }}
+                  components={{
+                    p: ({node, ...props}) => <p className="m-0" {...props} />,
+                    code: ({node, inline, className, children, ...props}) => {
+                      if (inline) {
+                        return <code className="bg-primary/10 text-primary px-1 py-0.5 rounded-sm font-mono text-sm" {...props}>{children}</code>
+                      }
+                      return <code className={cn("font-mono", className)} {...props}>{children}</code>
+                    },
+                    pre: ({node, ...props}) => <pre className="bg-secondary p-2 rounded-md my-2 text-xs overflow-x-auto" {...props} />
+                  }}
                 >
                   {comment.text}
                 </ReactMarkdown>

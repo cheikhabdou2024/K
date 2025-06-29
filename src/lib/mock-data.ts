@@ -181,10 +181,12 @@ export const mockSoundLibrary: Sound[] = [
 ];
 
 export const mockComments: Comment[] = [
-    { id: 'comment-1', user: users[2], text: "Wow, this looks **amazing**!", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2), likes: 125 },
-    { id: 'comment-2', user: users[3], text: "Great content, _keep it up_!", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 1), likes: 88 },
-    { id: 'comment-3', user: users[1], text: "Love this! So creative.", createdAt: new Date(Date.now() - 1000 * 60 * 30), likes: 231 },
-    { id: 'comment-4', user: users[0], text: "This is my ~~least~~ favorite so far!", createdAt: new Date(Date.now() - 1000 * 60 * 15), likes: 45, replyTo: users[1], parentId: 'comment-3' },
+    { id: 'comment-1', user: users[2], text: "Wow, this looks **amazing**!", createdAt: new Date("2024-07-22T10:00:00Z"), likes: 125 },
+    { id: 'comment-2', user: users[3], text: "Great content, _keep it up_!", createdAt: new Date("2024-07-22T11:00:00Z"), likes: 88 },
+    { id: 'comment-3', user: users[1], text: "Love this! So creative.", createdAt: new Date("2024-07-22T11:30:00Z"), likes: 231 },
+    { id: 'comment-4', user: users[0], text: "This is my ~~least~~ favorite so far!", createdAt: new Date("2024-07-22T11:45:00Z"), likes: 45, replyTo: users[1], parentId: 'comment-3' },
+    { id: 'comment-5', user: users[2], text: "For anyone wondering, here is the code: `console.log('hello');`", createdAt: new Date("2024-07-22T11:50:00Z"), likes: 15 },
+    { id: 'comment-6', user: users[0], text: "A multi-line example:\n```javascript\nfunction greet() {\n  return 'Hello, World!';\n}\n```", createdAt: new Date("2024-07-22T11:55:00Z"), likes: 22 },
 ];
 
 export const mockStories: Story[] = users.slice(1).map((user, index) => ({
