@@ -2,10 +2,12 @@
 'use client';
 
 import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer';
 import { Button } from './ui/button';
 import { Heart, Send, Loader2, Mic, Trash2, Play, Pause } from 'lucide-react';
 import { mockComments, mockMe, type Comment as CommentType } from '@/lib/mock-data';
@@ -16,7 +18,6 @@ import { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { scanCommentAction } from '@/app/comments/actions';
 import { cn } from '@/lib/utils';
-import { Separator } from './ui/separator';
 
 const AudioPlayer = ({ audioUrl }: { audioUrl: string }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -132,8 +133,20 @@ const CommentItem = ({ comment, onReply }: { comment: CommentType; onReply: (com
         </div>
       </div>
       <div className="flex flex-col items-center gap-0.5">
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleLike}>
-          <Heart className={cn("h-4 w-4", isLiked ? "fill-red-500 text-red-500" : "text-muted-foreground")} />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 transition-transform active:scale-125"
+          onClick={handleLike}
+        >
+          <Heart
+            className={cn(
+              'h-4 w-4 transition-colors',
+              isLiked
+                ? 'fill-red-500 text-red-500'
+                : 'text-muted-foreground'
+            )}
+          />
         </Button>
         <span className="text-xs text-muted-foreground">{likeCount > 0 ? likeCount.toLocaleString() : ''}</span>
       </div>
@@ -328,22 +341,20 @@ export function CommentSheet({
   }
 
   return (
-    <Sheet>
-      <SheetTrigger asChild>{children}</SheetTrigger>
-      <SheetContent side="bottom" className="h-[60%] flex flex-col rounded-t-2xl p-0">
-        <div className="text-center py-4 relative">
-          <p className="font-semibold">{comments.length.toLocaleString()} Comments</p>
-        </div>
-        <Separator />
+    <Drawer shouldScaleBackground={false}>
+      <DrawerTrigger asChild>{children}</DrawerTrigger>
+      <DrawerContent className="h-[60%] flex flex-col">
+        <DrawerHeader className="text-center p-4 pb-2">
+            <DrawerTitle>{comments.length.toLocaleString()} Comments</DrawerTitle>
+        </DrawerHeader>
         <ScrollArea className="flex-1 my-2">
-          <div className="space-y-6 px-4">
+          <div className="space-y-6 p-4">
             {comments.map((comment) => (
               <CommentItem key={comment.id} comment={comment} onReply={setReplyingTo} />
             ))}
           </div>
         </ScrollArea>
-        <Separator />
-        <div className="p-4 bg-background">
+        <div className="p-4 bg-background border-t">
           {replyingTo && (
             <div className="px-2 pb-2 text-sm text-muted-foreground flex justify-between items-center">
               <span>Replying to @{replyingTo.user.username}</span>
@@ -393,7 +404,7 @@ export function CommentSheet({
             </form>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }
