@@ -74,7 +74,7 @@ const AudioPlayer = ({ audioUrl }: { audioUrl: string }) => {
   }, []);
 
   const SoundWave = () => (
-    <svg width="100" height="24" viewBox="0 0 100 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="100" height="24" viewBox="0 0 100 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <line x1="2" y1="10" x2="2" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
         <line x1="6" y1="8" x2="6" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
         <line x1="10" y1="10" x2="10" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -106,7 +106,7 @@ const AudioPlayer = ({ audioUrl }: { audioUrl: string }) => {
   return (
     <div className="flex items-center gap-2 p-1.5 pr-3 rounded-full bg-primary/10 w-fit">
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
-      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90" onClick={togglePlayPause}>
+      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90" onClick={togglePlayPause} aria-label={isPlaying ? 'Pause audio comment' : 'Play audio comment'}>
         {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
       </Button>
       <div className="relative w-[100px] h-[24px]">
@@ -164,7 +164,7 @@ const CommentItem = ({
   };
 
   return (
-    <div className={cn("flex items-start gap-2 pr-4", { "ml-8": !!comment.parentId })}>
+    <div className={cn("flex items-start gap-2 pr-4", { "ml-8": !!comment.parentId })} role="article" aria-labelledby={`comment-user-${comment.id}`}>
        {isModMode && (
         <div className="pt-2">
             <Checkbox
@@ -186,7 +186,7 @@ const CommentItem = ({
           </div>
         )}
         <div className="flex items-center gap-1.5 flex-wrap">
-            <p className="text-xs text-muted-foreground">@{comment.user.username}</p>
+            <p id={`comment-user-${comment.id}`} className="text-xs text-muted-foreground">@{comment.user.username}</p>
             {isCommentOwnerCreator && (
                 <Crown className="h-3.5 w-3.5 text-yellow-500 fill-yellow-400" />
             )}
@@ -242,15 +242,17 @@ const CommentItem = ({
         <button
             onClick={handleLikeClick}
             className="h-8 w-8 flex items-center justify-center rounded-full transition-transform active:scale-125 focus:outline-none"
+            aria-label={isLiked ? 'Unlike comment' : 'Like comment'}
+            aria-pressed={isLiked}
         >
             <Heart className={cn('h-4 w-4 text-muted-foreground transition-colors', isLiked && 'fill-red-500 text-red-500')} />
         </button>
         <span className="text-xs text-muted-foreground">{likeCount > 0 ? likeCount.toLocaleString() : ''}</span>
-        <button onClick={handleBookmark} className="h-8 w-8 flex items-center justify-center rounded-full mt-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <button onClick={handleBookmark} className="h-8 w-8 flex items-center justify-center rounded-full mt-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={isBookmarked ? 'Remove bookmark from comment' : 'Bookmark comment'} aria-pressed={isBookmarked}>
           <Bookmark className={cn('h-4 w-4 text-muted-foreground transition-colors', isBookmarked && 'fill-primary text-primary')} />
         </button>
          {isViewingUserCreator && !comment.parentId && (
-            <button onClick={() => onPinComment(comment.id)} className="h-8 w-8 flex items-center justify-center rounded-full mt-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <button onClick={() => onPinComment(comment.id)} className="h-8 w-8 flex items-center justify-center rounded-full mt-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={isPinned ? 'Unpin comment' : 'Pin comment'} aria-pressed={isPinned}>
                 <Pin className={cn('h-4 w-4 text-muted-foreground transition-colors', isPinned && 'fill-primary text-primary')} />
             </button>
         )}
@@ -766,17 +768,17 @@ export function CommentSheet({
               )}
               {isRecording ? (
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={handleCancelRecording} className="text-destructive hover:bg-destructive/10 rounded-full" disabled={isSending}>
+                    <Button variant="ghost" size="icon" onClick={handleCancelRecording} className="text-destructive hover:bg-destructive/10 rounded-full" disabled={isSending} aria-label="Cancel recording">
                         <Trash2 className="h-5 w-5"/>
                     </Button>
                     <div className="flex-1 bg-muted rounded-full h-10 flex items-center justify-between px-4">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-primary" onClick={isPaused ? handleResumeRecording : handlePauseRecording}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-primary" onClick={isPaused ? handleResumeRecording : handlePauseRecording} aria-label={isPaused ? "Resume recording" : "Pause recording"}>
                             {isPaused ? <Mic className="h-4 w-4" /> : <Pause className="h-4 w-4 fill-current" />}
                         </Button>
                         {isPaused ? <p className="text-sm text-muted-foreground">Paused</p> : <AnimatedSoundWave />}
                         <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>
                     </div>
-                    <Button size="icon" onClick={handleStopAndSend} disabled={isSending} className="bg-primary rounded-full">
+                    <Button size="icon" onClick={handleStopAndSend} disabled={isSending} className="bg-primary rounded-full" aria-label="Send audio comment">
                         {isSending ? <Loader2 className="animate-spin" /> : <Send className="h-5 w-5" />}
                     </Button>
                 </div>
@@ -793,10 +795,11 @@ export function CommentSheet({
                             value={commentText}
                             onChange={(e) => setCommentText(e.target.value)}
                             disabled={isSending}
+                            aria-label="Add a text comment"
                         />
                          <Popover>
                             <PopoverTrigger asChild>
-                                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full text-muted-foreground hover:text-primary">
+                                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full text-muted-foreground hover:text-primary" aria-label="Open emoji picker">
                                     <Smile className="h-5 w-5" />
                                 </Button>
                             </PopoverTrigger>
