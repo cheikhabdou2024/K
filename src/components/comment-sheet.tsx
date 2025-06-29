@@ -347,7 +347,11 @@ export function CommentSheet({
   return (
     <Drawer shouldScaleBackground={false} open={open} onOpenChange={onOpenChange}>
       <DrawerTrigger asChild>{children}</DrawerTrigger>
-      <DrawerContent className="h-[60%] flex flex-col">
+      <DrawerContent
+        className="h-[60%] flex flex-col"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
         <DrawerHeader className="text-center p-4 pb-2">
             <DrawerTitle>{comments.length.toLocaleString()} Comments</DrawerTitle>
         </DrawerHeader>
