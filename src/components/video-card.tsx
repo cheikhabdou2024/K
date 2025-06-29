@@ -4,9 +4,11 @@ import type { FeedItem } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Heart, MessageCircle, Send, Music, Play } from 'lucide-react';
-import { CommentSheet } from './comment-sheet';
 import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
+import { CommentSheet } from './comment-sheet';
+
 
 interface VideoActionsProps {
   item: {
@@ -31,7 +33,7 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
 
 
   return (
-    <div className="absolute bottom-20 right-2 flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
+    <div className="absolute bottom-20 right-2 flex flex-col gap-4 z-10" onClick={(e) => e.stopPropagation()}>
       <Button
         variant="ghost"
         size="icon"
@@ -39,24 +41,27 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
         onClick={handleLikeClick}
       >
         <Heart 
-          className={cn("h-8 w-8 text-white transition-colors", isLiked && "fill-red-500 text-red-500")}
+          className={cn("h-8 w-8 text-white transition-all active:scale-125", isLiked && "fill-red-500 text-red-500")}
         />
         <span className="text-xs">{formattedLikeCount}</span>
       </Button>
-      <CommentSheet 
-        commentCount={item.comments}
-        open={isCommentSheetOpen}
-        onOpenChange={setIsCommentSheetOpen}
-      >
-        <Button
-          variant="ghost"
-          size="icon"
-          className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
-        >
-          <MessageCircle className="h-8 w-8 text-white" />
-          <span className="text-xs">{item.comments}</span>
-        </Button>
-      </CommentSheet>
+      <Drawer open={isCommentSheetOpen} onOpenChange={setIsCommentSheetOpen} shouldScaleBackground={false}>
+        <DrawerTrigger asChild>
+           <Button
+            variant="ghost"
+            size="icon"
+            className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
+          >
+            <MessageCircle className="h-8 w-8 text-white" />
+            <span className="text-xs">{item.comments}</span>
+          </Button>
+        </DrawerTrigger>
+        <DrawerContent className="h-[60%] flex flex-col">
+            <CommentSheet 
+              commentCount={item.comments}
+            />
+        </DrawerContent>
+      </Drawer>
       <Button
         variant="ghost"
         size="icon"
@@ -71,7 +76,7 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
 
 
 const VideoInfo = ({ item }: { item: FeedItem }) => (
-  <div className="absolute bottom-4 left-4 right-4 text-white" onClick={(e) => e.stopPropagation()}>
+  <div className="absolute bottom-4 left-4 right-4 text-white z-10" onClick={(e) => e.stopPropagation()}>
     <div className="flex items-center gap-2">
       <Avatar className="w-10 h-10 border-2 border-white">
         <AvatarImage src={item.user.avatarUrl} />
@@ -197,12 +202,13 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     const deltaX = end.x - start.x;
     const deltaY = end.y - start.y;
 
-    const swipeThreshold = 60;
+    const swipeThreshold = 40; // Reduced for easier activation
     const tapThreshold = 10;
 
-    // Check for a swipe up
-    if (deltaY < -swipeThreshold && Math.abs(deltaX) < swipeThreshold) {
+    // Check for a swipe up - requires a more vertical swipe now
+    if (deltaY < -swipeThreshold && Math.abs(deltaX) < 30) {
       setIsCommentSheetOpen(true);
+      // Cancel any pending single-tap action (play/pause)
       if (tapTimeout.current) {
         clearTimeout(tapTimeout.current);
         tapTimeout.current = null;
@@ -233,13 +239,13 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
       />
 
       {showHeart && (
-          <Heart fill="white" className="h-24 w-24 text-white col-start-1 row-start-1 z-10 pointer-events-none animate-like-heart" />
+          <Heart fill="white" className="h-24 w-24 text-white col-start-1 row-start-1 z-20 pointer-events-none animate-like-heart" />
       )}
       
       {!isPlaying && (
-          <Play className="h-20 w-20 text-white/70 pointer-events-none col-start-1 row-start-1" fill="white" />
+          <Play className="h-20 w-20 text-white/70 pointer-events-none col-start-1 row-start-1 z-20" fill="white" />
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none col-start-1 row-start-1" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none col-start-1 row-start-1 z-10" />
       <VideoInfo item={item} />
       <VideoActions 
         item={item} 
