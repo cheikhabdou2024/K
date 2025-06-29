@@ -4,7 +4,7 @@
 import type { FeedItem, User } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
-import { Heart, MessageCircle, Send, Play, Settings, Plus, Eye } from 'lucide-react';
+import { Heart, MessageCircle, Send, Play, Settings, Plus, Eye, PictureInPicture2 } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { CommentSheet } from './comment-sheet';
@@ -33,12 +33,16 @@ interface VideoActionsProps {
   videoOwnerId: string;
   selectedQuality: string;
   onQualityChange: (quality: string) => void;
+  viewCount: number;
+  onPipClick: () => void;
+  isPipSupported: boolean;
 }
 
-const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentSheetOpen, setIsCommentSheetOpen, videoOwnerId, selectedQuality, onQualityChange }: VideoActionsProps) => {
+const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentSheetOpen, setIsCommentSheetOpen, videoOwnerId, selectedQuality, onQualityChange, viewCount, onPipClick, isPipSupported }: VideoActionsProps) => {
   const [formattedLikeCount, setFormattedLikeCount] = useState('');
   const [formattedCommentCount, setFormattedCommentCount] = useState('');
   const [formattedShareCount, setFormattedShareCount] = useState('');
+  const [formattedViewCount, setFormattedViewCount] = useState('');
 
 
   useEffect(() => {
@@ -47,11 +51,26 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
     setFormattedLikeCount(likeCount.toLocaleString());
     setFormattedCommentCount(item.comments.toLocaleString());
     setFormattedShareCount(item.shares.toLocaleString());
-  }, [likeCount, item.comments, item.shares]);
+
+    try {
+      const formatter = new Intl.NumberFormat('en-US', {
+        notation: 'compact',
+        maximumFractionDigits: 1,
+      });
+      setFormattedViewCount(formatter.format(viewCount));
+    } catch (e) {
+      // Fallback for older environments
+      setFormattedViewCount(viewCount.toLocaleString());
+    }
+  }, [likeCount, item.comments, item.shares, viewCount]);
 
 
   return (
     <div className="absolute bottom-20 right-2 flex flex-col gap-4 z-10" onClick={(e) => e.stopPropagation()}>
+      <div className="flex flex-col items-center h-auto text-white">
+        <Eye className="h-8 w-8 text-white" />
+        <span className="text-xs">{formattedViewCount}</span>
+      </div>
       <Button
         variant="ghost"
         size="icon"
@@ -86,6 +105,18 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
         <Send className="h-8 w-8 text-white" />
         <span className="text-xs">{formattedShareCount}</span>
       </Button>
+      {isPipSupported && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
+          onClick={onPipClick}
+          aria-label="Enter Picture-in-Picture mode"
+        >
+          <PictureInPicture2 className="h-8 w-8 text-white" />
+          <span className="text-xs">PiP</span>
+        </Button>
+      )}
        <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -146,31 +177,6 @@ const getDistance = (p1: {x:number, y:number}, p2: {x:number, y:number}) => {
   return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
 };
 
-const ViewCount = ({ count }: { count: number }) => {
-  const [formattedCount, setFormattedCount] = useState<string>('');
-
-  useEffect(() => {
-    // Intl.NumberFormat is client-side, so use useEffect to prevent hydration mismatch.
-    try {
-      const formatter = new Intl.NumberFormat('en-US', {
-        notation: 'compact',
-        maximumFractionDigits: 1,
-      });
-      setFormattedCount(formatter.format(count));
-    } catch (e) {
-      // Fallback for older environments
-      setFormattedCount(count.toLocaleString());
-    }
-  }, [count]);
-
-  return (
-    <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 text-white bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full">
-      <Eye className="h-5 w-5" />
-      <span className="font-semibold text-sm">{formattedCount}</span>
-    </div>
-  );
-};
-
 
 export function VideoCard({ item, isActive }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -189,6 +195,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   const [videoProgress, setVideoProgress] = useState(0);
   const { toast } = useToast();
   const [quality, setQuality] = useState('Auto');
+  const [isPipSupported, setIsPipSupported] = useState(false);
 
   // State and refs for pinch-to-zoom
   const [scale, setScale] = useState(1);
@@ -206,6 +213,14 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   const hideSpeedIndicatorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const PLAYBACK_SPEEDS = [0.5, 1.0, 1.25, 1.5, 2.0];
+  
+  useEffect(() => {
+    // Check for Picture-in-Picture support on the client
+    if (typeof window !== 'undefined' && 'pictureInPictureEnabled' in document) {
+        setIsPipSupported(document.pictureInPictureEnabled);
+    }
+  }, []);
+
 
   useEffect(() => {
     const video = videoRef.current;
@@ -489,6 +504,26 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
       description: `Video quality has been set to ${newQuality}.`,
     });
   };
+  
+  const handlePipClick = async () => {
+    if (!videoRef.current) return;
+
+    try {
+        if (videoRef.current !== document.pictureInPictureElement) {
+            await videoRef.current.requestPictureInPicture();
+        } else {
+            await document.exitPictureInPicture();
+        }
+    } catch (error) {
+        console.error('PiP Error:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Picture-in-Picture Failed',
+            description: 'Could not enter Picture-in-Picture mode.',
+        });
+    }
+  };
+
 
   return (
     <div 
@@ -528,8 +563,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
       
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none col-start-1 row-start-1 z-10" />
 
-      <ViewCount count={item.views} />
-
       <CreatorAvatar user={item.user} />
       
       <VideoActions 
@@ -542,6 +575,9 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
           videoOwnerId={item.user.id}
           selectedQuality={quality}
           onQualityChange={handleQualityChange}
+          viewCount={item.views}
+          onPipClick={handlePipClick}
+          isPipSupported={isPipSupported}
       />
       
       {!isPlaying && isActive && (
