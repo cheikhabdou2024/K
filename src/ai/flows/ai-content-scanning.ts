@@ -41,25 +41,24 @@ export async function aiContentScan(input: AiContentScanInput): Promise<AiConten
 
 const safetyConfig = {
   safetySettings: [
-    {category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_LOW_AND_ABOVE'},
+    {category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE'},
     {category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE'},
-    {category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_LOW_AND_ABOVE'},
+    {category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE'},
     {category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE'},
     {category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_MEDIUM_AND_ABOVE'},
   ],
 };
 
-const basePrompt = `You are a strict AI content moderation engine. Your primary function is to analyze content and determine if it violates community guidelines. You must be extremely strict and flag any content that is even remotely offensive, hateful, harassing, or sexually explicit.
+const basePrompt = `You are an AI content moderator for a social video app. Your goal is to keep the community safe and welcoming. Analyze the content based on the following strict guidelines and determine if it should be blocked.
 
 Your output MUST be a JSON object with 'isSafe' (boolean) and 'reason' (string, optional).
 
-Here are the guidelines:
-- **Zero Tolerance for Hate Speech & Harassment**: Any form of hate speech, discrimination, personal attacks, insults, or harassment is strictly prohibited. This includes phrases like "fuck you".
-- **No Adult Content**: No sexually explicit material, nudity, or suggestive content.
-- **No Dangerous Content**: No promotion of dangerous acts, self-harm, or violence.
+**Guidelines (Set 'isSafe' to false for these):**
+- **Hate Speech & Harassment**: Any content that promotes discrimination, disparages, or harasses on the basis of race, ethnicity, religion, gender, sexual orientation, disability, or other protected characteristics. This includes direct insults, personal attacks, and threats (e.g., "I hate you," "you are stupid", "fuck you").
+- **Adult & Sexually Explicit Content**: No nudity, sexually suggestive, or explicit material.
+- **Dangerous Content**: No promotion of dangerous acts, self-harm, or violence.
 
-Analyze the following content. If it violates ANY of these rules, you MUST set 'isSafe' to false and provide a specific reason. Otherwise, set 'isSafe' to true.
-`;
+Analyze the following content. If it clearly violates these rules, set 'isSafe' to false and provide a specific reason. For all other content, including edgy humor or mild critiques that do not cross into harassment, set 'isSafe' to true.`;
 
 const aiTextScanPrompt = ai.definePrompt({
   name: 'aiTextScanPrompt',
@@ -91,7 +90,7 @@ const aiContentScanFlow = ai.defineFlow(
         // If the model's safety settings are triggered, the output will be null.
         // We must handle this case to ensure we correctly flag the content as unsafe.
         if (!output) {
-            return { isSafe: false, reason: "This comment violates our community guidelines for harassment or hate speech." };
+            return { isSafe: false, reason: "This comment was blocked by our safety filters for potential harassment or hate speech." };
         }
         return output;
       } else {
