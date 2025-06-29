@@ -19,6 +19,8 @@ import { useToast } from '@/hooks/use-toast';
 import { scanCommentAction, transcribeAudioAction } from '@/app/comments/actions';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const blobToDataUri = (blob: Blob) =>
   new Promise<string>((resolve, reject) => {
@@ -199,12 +201,17 @@ const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, i
             )}
             {comment.audioUrl && <AudioPlayer audioUrl={comment.audioUrl} />}
             {comment.text && (
-              <p className={cn(
+              <div className={cn(
                 'break-words',
                 comment.audioUrl ? 'pt-2 mt-2 border-t border-primary/20 text-muted-foreground' : ''
               )}>
-                {comment.text}
-              </p>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{ p: ({node, ...props}) => <p className="m-0" {...props} /> }}
+                >
+                  {comment.text}
+                </ReactMarkdown>
+              </div>
             )}
         </div>
         <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground px-2">
@@ -302,30 +309,46 @@ export function CommentSheet({
 
   const commentThreads = useMemo(() => {
     const commentMap = new Map();
-    comments.forEach(comment => commentMap.set(comment.id, { ...comment, replies: [] }));
+    const threads: CommentType[] = [];
+    const repliesMap = new Map<string, CommentType[]>();
 
-    const threads = [];
-    commentMap.forEach(comment => {
-        if (comment.parentId && commentMap.has(comment.parentId)) {
-            commentMap.get(comment.parentId).replies.push(comment);
+    comments.forEach(comment => {
+        if (comment.parentId) {
+            if (!repliesMap.has(comment.parentId)) {
+                repliesMap.set(comment.parentId, []);
+            }
+            repliesMap.get(comment.parentId)!.push(comment);
         } else {
             threads.push(comment);
         }
     });
 
-    // Pinning logic
-    if (!pinnedCommentId) return threads;
+    const populatedThreads = threads.map(thread => ({
+        ...thread,
+        replies: repliesMap.get(thread.id) || [],
+    }));
     
-    const pinnedThreadIndex = threads.findIndex(t => t.id === pinnedCommentId);
+    // Pinning logic
+    if (!pinnedCommentId) return populatedThreads;
+    
+    const pinnedThreadIndex = populatedThreads.findIndex(t => t.id === pinnedCommentId);
     if (pinnedThreadIndex > -1) {
-        const pinnedThread = threads[pinnedThreadIndex];
-        const otherThreads = threads.filter(t => t.id !== pinnedCommentId);
+        const pinnedThread = populatedThreads[pinnedThreadIndex];
+        const otherThreads = populatedThreads.filter(t => t.id !== pinnedCommentId);
         return [pinnedThread, ...otherThreads];
     }
-    return threads;
+    return populatedThreads;
   }, [comments, pinnedCommentId]);
 
   const handlePinComment = (commentId: string) => {
+    if (!commentThreads.some(thread => thread.id === commentId && !thread.parentId)) {
+        toast({
+            variant: "destructive",
+            title: 'Pinning Failed',
+            description: 'Only top-level comments can be pinned.',
+        });
+        return;
+    }
     setPinnedCommentId(currentId => {
         const newPinnedId = currentId === commentId ? null : commentId;
         toast({
@@ -446,25 +469,27 @@ export function CommentSheet({
     if(!audioUrl) setIsSending(true);
 
     try {
-      // Content moderation is currently bypassed but can be re-enabled here.
-      const result = await scanCommentAction(contentToScan);
-
-      if (result.isSafe) {
-        const newComment: CommentType = {
-          id: `comment-${Date.now()}`,
-          user: mockMe,
-          timestamp: 'Just now',
-          likes: 0,
-          ...(text && { text }),
-          ...(audioUrl && { audioUrl }),
-          ...(replyingTo && { replyTo: replyingTo.user, parentId: replyingTo.id }),
-        };
-        
-        setComments(prev => [newComment, ...prev]);
-        
-        setCommentText('');
-        setReplyingTo(null);
+      const newComment: CommentType = {
+        id: `comment-${Date.now()}`,
+        user: mockMe,
+        timestamp: 'Just now',
+        likes: 0,
+        ...(text && { text }),
+        ...(audioUrl && { audioUrl }),
+        ...(replyingTo && {
+          replyTo: replyingTo.user,
+          parentId: replyingTo.parentId || replyingTo.id, // Reply to parent thread
+        }),
+      };
+      
+      setComments(prev => [newComment, ...prev]);
+      
+      if (replyingTo) {
+          setExpandedThreads(prev => new Set(prev).add(replyingTo.parentId || replyingTo.id));
       }
+      
+      setCommentText('');
+      setReplyingTo(null);
     } catch (error) {
        toast({
         variant: 'destructive',
