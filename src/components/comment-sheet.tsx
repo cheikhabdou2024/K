@@ -9,7 +9,7 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { Button } from './ui/button';
-import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark, Crown, CheckCircle2, Pin, MessageSquareReply, ChevronDown, Smile, Sparkles, Shield } from 'lucide-react';
+import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark, Crown, CheckCircle2, Pin, MessageSquareReply, ChevronDown, Smile, Sparkles, Shield, CalendarClock } from 'lucide-react';
 import { mockComments, mockMe, type Comment as CommentType } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
@@ -24,6 +24,7 @@ import remarkGfm from 'remark-gfm';
 import { formatDistanceToNow } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
+import { Calendar } from './ui/calendar';
 
 const blobToDataUri = (blob: Blob) =>
   new Promise<string>((resolve, reject) => {
@@ -330,6 +331,10 @@ export function CommentSheet({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  
+  // Scheduling state
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   const commentThreads = useMemo(() => {
     const repliesMap = new Map<string, CommentType[]>();
@@ -560,6 +565,37 @@ export function CommentSheet({
       e.preventDefault();
       handleSend({ text: commentText });
   }
+  
+  const handleScheduleComment = async () => {
+    if (!commentText.trim() || !scheduledDate) return;
+
+    setIsSending(true);
+    setPopoverOpen(false); // Close popover
+
+    try {
+      // In a real app, this would call a backend service to store the scheduled comment.
+      // For this demo, we just simulate it with a timeout and a toast.
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      toast({
+        title: "Comment Scheduled (Demo)",
+        description: `Your reply will be posted on ${scheduledDate.toLocaleString()}.`,
+      });
+      
+      setCommentText('');
+      setReplyingTo(null);
+      setScheduledDate(undefined);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to schedule comment. Please try again.',
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
 
   const toggleModMode = () => {
     setIsModMode(prev => {
@@ -767,13 +803,13 @@ export function CommentSheet({
                             <PopoverContent className="w-80 h-96 p-0 mb-2 z-[80]">
                                 <ScrollArea className="h-full">
                                     <div className="p-2">
-                                    {emojiCategories.map(category => (
+                                    {emojiCategories.map((category, catIndex) => (
                                         <div key={category.name}>
                                             <h3 className="text-sm font-semibold text-muted-foreground px-2 py-1">{category.name}</h3>
                                             <div className="grid grid-cols-8 gap-1">
-                                                {category.emojis.map((emoji, index) => (
+                                                {category.emojis.map((emoji, emojiIndex) => (
                                                     <button
-                                                        key={`${category.name}-${index}`}
+                                                        key={`${catIndex}-${emojiIndex}`}
                                                         type="button"
                                                         className="text-2xl rounded-md hover:bg-muted p-1 transition-colors"
                                                         onClick={() => setCommentText(prev => prev + emoji)}
@@ -790,11 +826,60 @@ export function CommentSheet({
                         </Popover>
                     </div>
                     {commentText.trim() ? (
-                        <Button type="submit" size="icon" variant="ghost" className="bg-transparent rounded-full" disabled={isSending}>
-                            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 text-primary" />}
-                        </Button>
+                        <div className="flex items-center gap-1">
+                            {isViewingUserCreator && (
+                                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button type="button" variant="ghost" size="icon" className="rounded-full text-primary hover:bg-primary/10" aria-label="Schedule comment">
+                                            <CalendarClock className="h-5 w-5" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-4 z-[80]">
+                                        <div className="grid gap-4">
+                                            <div className="space-y-2">
+                                                <h4 className="font-medium leading-none">Schedule Response</h4>
+                                                <p className="text-sm text-muted-foreground">
+                                                Select a future date and time to post your comment.
+                                                </p>
+                                            </div>
+                                            <Calendar
+                                                mode="single"
+                                                selected={scheduledDate}
+                                                onSelect={setScheduledDate}
+                                                disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))}
+                                            />
+                                            <Input
+                                                type="time"
+                                                className="w-full"
+                                                onChange={(e) => {
+                                                    if (!e.target.value) return;
+                                                    const [hours, minutes] = e.target.value.split(':').map(Number);
+                                                    const newDate = scheduledDate ? new Date(scheduledDate) : new Date();
+                                                    if (newDate < new Date()) { // if date is in past, set to today
+                                                        newDate.setFullYear(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+                                                    }
+                                                    newDate.setHours(hours, minutes, 0, 0);
+                                                    setScheduledDate(newDate);
+                                                }}
+                                            />
+                                            <Button
+                                                onClick={handleScheduleComment}
+                                                disabled={!scheduledDate || scheduledDate < new Date() || isSending}
+                                                className="w-full"
+                                            >
+                                                {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                                Schedule
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                            )}
+                            <Button type="submit" size="icon" variant="ghost" className="bg-transparent rounded-full" disabled={isSending} aria-label="Send comment">
+                                {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 text-primary" />}
+                            </Button>
+                        </div>
                     ) : (
-                         <Button type="button" size="icon" variant="ghost" className="bg-transparent rounded-full" onClick={handleStartRecording} disabled={isSending}>
+                         <Button type="button" size="icon" variant="ghost" className="bg-transparent rounded-full" onClick={handleStartRecording} disabled={isSending} aria-label="Record audio comment">
                             {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Mic className="h-5 w-5 text-primary" />}
                         </Button>
                     )}
