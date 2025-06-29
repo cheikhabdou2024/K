@@ -9,7 +9,7 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { Button } from './ui/button';
-import { Heart, Send, Loader2, Mic, Trash2, Play, Pause } from 'lucide-react';
+import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark } from 'lucide-react';
 import { mockComments, mockMe, type Comment as CommentType } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
@@ -108,8 +108,21 @@ const CommentItem = ({ comment, onReply }: { comment: CommentType; onReply: (com
   const [isPickerOpen, setPickerOpen] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout>();
   const isLongPress = useRef(false);
+  
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const { toast } = useToast();
 
   const reactions = ['❤️', '😂', '🔥', '😮', '👍'];
+  
+  const handleBookmark = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newState = !isBookmarked;
+    setIsBookmarked(newState);
+    toast({
+      title: newState ? 'Comment Saved' : 'Saved Comment Removed',
+      description: newState ? "We'll add a place in your profile to view these soon." : undefined,
+    });
+  };
 
   const handleReactionSelect = (newReaction: string) => {
     if (reaction === newReaction) {
@@ -195,6 +208,9 @@ const CommentItem = ({ comment, onReply }: { comment: CommentType; onReply: (com
             </PopoverContent>
         </Popover>
         <span className="text-xs text-muted-foreground">{likeCount > 0 ? likeCount.toLocaleString() : ''}</span>
+        <button onClick={handleBookmark} className="h-8 w-8 flex items-center justify-center rounded-full mt-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Bookmark className={cn('h-4 w-4 text-muted-foreground transition-colors', isBookmarked && 'fill-primary text-primary')} />
+        </button>
       </div>
     </div>
   );
