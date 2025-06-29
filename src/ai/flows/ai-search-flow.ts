@@ -36,7 +36,9 @@ const FeedItemSchema = z.object({
     likes: z.number(),
     comments: z.number(),
     shares: z.number(),
-})
+    isLiked: z.boolean().optional(),
+    createdAt: z.any(),
+});
 const AiSearchOutputSchema = z.object({
   results: z.array(FeedItemSchema).describe('An array of relevant feed items, ranked by relevance.'),
 });

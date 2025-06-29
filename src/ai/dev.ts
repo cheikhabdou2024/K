@@ -3,3 +3,4 @@ config();
 
 import '@/ai/flows/ai-content-scanning.ts';
 import '@/ai/flows/ai-search-flow.ts';
+import '@/ai/flows/ai-recommendation-flow.ts';

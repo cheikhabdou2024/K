@@ -9,15 +9,16 @@ import {
   CarouselItem,
 } from '@/components/ui/carousel';
 import { VideoCard } from '@/components/video-card';
-import { mockFeedItems, type FeedItem } from '@/lib/mock-data';
+import type { FeedItem } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+import { getRecommendedFeedAction } from './actions';
 
 
 const LoadingScreen = () => (
   <div className="h-full w-full bg-black flex flex-col items-center justify-center text-white gap-4">
     <Loader2 className="h-10 w-10 animate-spin text-primary" />
-    <p className="font-bold text-lg">Loading Feed...</p>
+    <p className="font-bold text-lg">Curating Your Feed...</p>
   </div>
 );
 
@@ -29,11 +30,14 @@ export default function Home() {
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
-    // Simulate fetching data
-    setTimeout(() => {
-      setFeedItems(mockFeedItems);
+    const fetchFeed = async () => {
+      setIsLoading(true);
+      const recommendedItems = await getRecommendedFeedAction();
+      setFeedItems(recommendedItems);
       setIsLoading(false);
-    }, 500);
+    };
+
+    fetchFeed();
   }, []);
 
   const onScroll = React.useCallback((api: CarouselApi) => {
@@ -109,7 +113,7 @@ export default function Home() {
      return (
        <div className="h-full w-full bg-black flex flex-col items-center justify-center text-white gap-4 text-center p-4">
          <p className="font-bold text-2xl">Welcome to FlipTok!</p>
-         <p className="text-muted-foreground">It looks like there are no videos yet.</p>
+         <p className="text-muted-foreground">Could not load recommendations.</p>
          <p className="text-muted-foreground">Be the first to share something amazing!</p>
        </div>
      );
