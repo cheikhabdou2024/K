@@ -166,27 +166,42 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   const initialPinchDistanceRef = useRef(0);
   const wasGestureActiveRef = useRef(false);
   const lastScaleRef = useRef(1);
+  
+  // State and refs for playback speed control
+  const [playbackRate, setPlaybackRate] = useState(1.0);
+  const [showSpeedIndicator, setShowSpeedIndicator] = useState(false);
+  const speedChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const speedChangeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const hideSpeedIndicatorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const PLAYBACK_SPEEDS = [0.5, 1.0, 1.25, 1.5, 2.0];
 
   useEffect(() => {
-    if (videoRef.current) {
+    const video = videoRef.current;
+    if (video) {
       if (isActive) {
-        videoRef.current.play().catch(error => console.error("Video play failed:", error));
+        video.play().catch(error => console.error("Video play failed:", error));
         setIsPlaying(true);
+        video.playbackRate = 1.0; // Always start new videos at 1x speed
+        setPlaybackRate(1.0);
       } else {
-        videoRef.current.pause();
-        videoRef.current.currentTime = 0;
+        video.pause();
+        video.currentTime = 0;
         setIsPlaying(false);
         setIsCommentSheetOpen(false);
-        // Reset zoom when video becomes inactive
+        // Reset zoom and other states when video becomes inactive
         setScale(1);
         setPosition({ x: 0, y: 0 });
       }
     }
 
-    // Cleanup timeouts when the component becomes inactive or unmounts
+    // Cleanup all timeouts when the component becomes inactive or unmounts
     return () => {
       if (tapTimeout.current) clearTimeout(tapTimeout.current);
       if (heartAnimationTimeout.current) clearTimeout(heartAnimationTimeout.current);
+      if (speedChangeTimeoutRef.current) clearTimeout(speedChangeTimeoutRef.current);
+      if (speedChangeIntervalRef.current) clearInterval(speedChangeIntervalRef.current);
+      if (hideSpeedIndicatorTimeoutRef.current) clearTimeout(hideSpeedIndicatorTimeoutRef.current);
     };
   }, [isActive]);
 
@@ -264,16 +279,64 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     }, 800);
   };
   
+  const changeSpeed = (direction: 'increase' | 'decrease') => {
+    const currentIndex = PLAYBACK_SPEEDS.indexOf(playbackRate);
+    let nextIndex;
+    if (direction === 'increase') {
+        nextIndex = Math.min(currentIndex + 1, PLAYBACK_SPEEDS.length - 1);
+    } else {
+        nextIndex = Math.max(currentIndex - 1, 0);
+    }
+    const newRate = PLAYBACK_SPEEDS[nextIndex];
+
+    if (newRate !== playbackRate) {
+        setPlaybackRate(newRate);
+        if (videoRef.current) {
+            videoRef.current.playbackRate = newRate;
+        }
+    }
+    
+    setShowSpeedIndicator(true);
+    if (hideSpeedIndicatorTimeoutRef.current) {
+        clearTimeout(hideSpeedIndicatorTimeoutRef.current);
+    }
+  };
+
   const handlePointerDown = (e: React.PointerEvent) => {
     wasGestureActiveRef.current = false;
     pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     
     if (pointersRef.current.size === 1) {
         pointerStartRef.current = { x: e.clientX, y: e.clientY };
+        
+        // Speed control logic on long press
+        if (scale === 1) { // Only when not zoomed
+            const target = e.currentTarget;
+            const rect = target.getBoundingClientRect();
+            const touchX = e.clientX - rect.left;
+            const direction = touchX > rect.width / 2 ? 'increase' : 'decrease';
+
+            speedChangeTimeoutRef.current = setTimeout(() => {
+                if (tapTimeout.current) {
+                    clearTimeout(tapTimeout.current);
+                    tapTimeout.current = null;
+                }
+                wasGestureActiveRef.current = true;
+                
+                changeSpeed(direction);
+
+                speedChangeIntervalRef.current = setInterval(() => {
+                    changeSpeed(direction);
+                }, 400);
+
+            }, 500); // Long press duration
+        }
     }
     
     if (pointersRef.current.size === 2) {
         if (tapTimeout.current) clearTimeout(tapTimeout.current);
+        if (speedChangeTimeoutRef.current) clearTimeout(speedChangeTimeoutRef.current);
+
         const points = Array.from(pointersRef.current.values());
         initialPinchDistanceRef.current = getDistance(points[0] as any, points[1] as any);
         lastScaleRef.current = scale;
@@ -282,6 +345,14 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!pointersRef.current.has(e.pointerId)) return;
+
+    if (pointerStartRef.current && speedChangeTimeoutRef.current) {
+        const moveDistance = getDistance(pointerStartRef.current, { x: e.clientX, y: e.clientY });
+        if (moveDistance > 10) {
+            clearTimeout(speedChangeTimeoutRef.current);
+            speedChangeTimeoutRef.current = null;
+        }
+    }
 
     pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     
@@ -315,6 +386,20 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   
   const handlePointerUp = (e: React.PointerEvent) => {
     pointersRef.current.delete(e.pointerId);
+
+    if (speedChangeTimeoutRef.current) {
+        clearTimeout(speedChangeTimeoutRef.current);
+        speedChangeTimeoutRef.current = null;
+    }
+    if (speedChangeIntervalRef.current) {
+        clearInterval(speedChangeIntervalRef.current);
+        speedChangeIntervalRef.current = null;
+    }
+    if (showSpeedIndicator) {
+         hideSpeedIndicatorTimeoutRef.current = setTimeout(() => {
+            setShowSpeedIndicator(false);
+        }, 1000);
+    }
 
     if (wasGestureActiveRef.current) {
         if (scale < 1.05) {
@@ -395,6 +480,12 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
             transformOrigin: 'center'
         }}
       />
+
+      {showSpeedIndicator && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/20 pointer-events-none col-start-1 row-start-1">
+            <span className="text-white text-4xl font-bold drop-shadow-lg animate-pulse">{playbackRate.toFixed(2)}x</span>
+        </div>
+      )}
 
       {showHeart && (
           <Heart fill="white" className="h-24 w-24 text-white col-start-1 row-start-1 z-20 pointer-events-none animate-like-heart" />
