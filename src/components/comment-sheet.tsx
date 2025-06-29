@@ -185,6 +185,9 @@ const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, i
                   remarkPlugins={[remarkGfm]}
                   components={{
                     p: ({node, ...props}) => <p className="m-0" {...props} />,
+                    a: ({node, ...props}) => (
+                      <a className="text-primary font-semibold hover:underline cursor-pointer" {...props} />
+                    ),
                     code: ({node, inline, className, children, ...props}) => {
                       if (inline) {
                         return <code className="bg-primary/10 text-primary px-1 py-0.5 rounded-sm font-mono text-sm" {...props}>{children}</code>
@@ -194,7 +197,7 @@ const CommentItem = ({ comment, onReply, videoOwnerId, isPinned, onPinComment, i
                     pre: ({node, ...props}) => <pre className="bg-secondary p-2 rounded-md my-2 text-xs overflow-x-auto" {...props} />
                   }}
                 >
-                  {comment.text}
+                  {comment.text.replace(/@(\w+)/g, '[@$1](/profile/$1)')}
                 </ReactMarkdown>
               </div>
             )}

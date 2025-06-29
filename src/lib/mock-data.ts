@@ -208,6 +208,7 @@ export const mockComments: Comment[] = [
     { id: 'comment-4', user: users[0], text: "This is my ~~least~~ favorite so far!", createdAt: new Date("2024-07-22T11:45:00Z"), likes: 45, replyTo: users[1], parentId: 'comment-3' },
     { id: 'comment-5', user: users[2], text: "For anyone wondering, here is the code: `console.log('hello');`", createdAt: new Date("2024-07-22T11:50:00Z"), likes: 15 },
     { id: 'comment-6', user: users[0], text: "A multi-line example:\n```javascript\nfunction greet() {\n  return 'Hello, World!';\n}\n```", createdAt: new Date("2024-07-22T11:55:00Z"), likes: 22 },
+    { id: 'comment-7', user: users[3], text: "Hey @janedoe, check this out! Awesome work.", createdAt: new Date("2024-07-22T12:10:00Z"), likes: 5 },
 ];
 
 export const mockStories: Story[] = users.slice(1).map((user, index) => ({
