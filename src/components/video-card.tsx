@@ -8,6 +8,7 @@ import { Heart, MessageCircle, Send, Music, Play } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { CommentSheet } from './comment-sheet';
+import { Slider } from './ui/slider';
 
 
 interface VideoActionsProps {
@@ -116,29 +117,54 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const wasPlayingBeforeCommentOpen = useRef(false);
 
+  // New state for preview feature
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (videoRef.current) {
       if (isActive) {
-        videoRef.current.play().catch(error => console.error("Video play failed:", error));
-        setIsPlaying(true);
+        // Don't play if we're in preview mode from a previous long press
+        if (!isPreviewing) {
+            videoRef.current.play().catch(error => console.error("Video play failed:", error));
+            setIsPlaying(true);
+        }
       } else {
         videoRef.current.pause();
         videoRef.current.currentTime = 0;
         setIsPlaying(false);
-        setIsCommentSheetOpen(false); // Close comments when swiping to new video
+        setIsCommentSheetOpen(false);
+        setIsPreviewing(false); // Reset preview state when swiping away
       }
     }
 
     // Cleanup timeouts when the component becomes inactive or unmounts
     return () => {
-      if (tapTimeout.current) {
-        clearTimeout(tapTimeout.current);
-      }
-      if (heartAnimationTimeout.current) {
-        clearTimeout(heartAnimationTimeout.current);
-      }
+      if (tapTimeout.current) clearTimeout(tapTimeout.current);
+      if (heartAnimationTimeout.current) clearTimeout(heartAnimationTimeout.current);
+      if (longPressTimeout.current) clearTimeout(longPressTimeout.current);
     };
-  }, [isActive]);
+  }, [isActive, isPreviewing]);
+
+  // Update video progress for the slider
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const updateProgress = () => {
+        if (video.duration) {
+            setVideoProgress((video.currentTime / video.duration) * 100);
+        }
+    };
+
+    video.addEventListener('timeupdate', updateProgress);
+
+    return () => {
+        video.removeEventListener('timeupdate', updateProgress);
+    };
+  }, []);
+
 
   useEffect(() => {
     if (!isActive) return; // Only for the active video
@@ -196,31 +222,58 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     }, 800);
   };
 
-  const handleTap = () => {
-    // If a timeout is already set, it means this is a double tap
-    if (tapTimeout.current) {
-      clearTimeout(tapTimeout.current);
-      tapTimeout.current = null;
-      triggerDoubleTapLike();
-    } else {
-      // Otherwise, it's a single tap. Set a timeout to handle play/pause
-      tapTimeout.current = setTimeout(() => {
-        togglePlay();
-        tapTimeout.current = null;
-      }, 300); // Wait 300ms to see if a second tap occurs
-    }
-  };
-  
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (e.isPrimary) {
-      pointerStartRef.current = { x: e.clientX, y: e.clientY };
+    if (!e.isPrimary) return;
+
+    pointerStartRef.current = { x: e.clientX, y: e.clientY };
+
+    if (longPressTimeout.current) clearTimeout(longPressTimeout.current);
+    longPressTimeout.current = setTimeout(() => {
+        if (tapTimeout.current) {
+            clearTimeout(tapTimeout.current);
+            tapTimeout.current = null;
+        }
+        setIsPreviewing(true);
+        if (videoRef.current) {
+            videoRef.current.pause();
+            setIsPlaying(false);
+        }
+        longPressTimeout.current = null;
+    }, 500);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!e.isPrimary || !pointerStartRef.current || !longPressTimeout.current) return;
+    
+    const moveThreshold = 10;
+    const deltaX = Math.abs(e.clientX - pointerStartRef.current.x);
+    const deltaY = Math.abs(e.clientY - pointerStartRef.current.y);
+
+    if (deltaX > moveThreshold || deltaY > moveThreshold) {
+        clearTimeout(longPressTimeout.current);
+        longPressTimeout.current = null;
     }
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
-    if (!e.isPrimary || !pointerStartRef.current) {
-      return;
+    if (!e.isPrimary) return;
+    
+    if (isPreviewing) {
+        setIsPreviewing(false);
+        if (videoRef.current && isActive) {
+            videoRef.current.play().catch(console.error);
+            setIsPlaying(true);
+        }
+        pointerStartRef.current = null; 
+        return;
     }
+
+    if (longPressTimeout.current) {
+        clearTimeout(longPressTimeout.current);
+        longPressTimeout.current = null;
+    }
+
+    if (!pointerStartRef.current) return;
 
     const start = pointerStartRef.current;
     const end = { x: e.clientX, y: e.clientY };
@@ -229,10 +282,8 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     const deltaX = Math.abs(end.x - start.x);
     const deltaY = end.y - start.y;
 
-    // A valid swipe up must be primarily vertical and a certain distance.
     if (deltaY < -40 && deltaX < 30) {
         setIsCommentSheetOpen(true);
-        // Cancel any pending single-tap action (play/pause).
         if (tapTimeout.current) {
             clearTimeout(tapTimeout.current);
             tapTimeout.current = null;
@@ -240,16 +291,25 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         return;
     }
     
-    // Check if it's a tap (minimal movement)
     if (deltaX < 10 && Math.abs(deltaY) < 10) {
-      handleTap();
+      if (tapTimeout.current) {
+        clearTimeout(tapTimeout.current);
+        tapTimeout.current = null;
+        triggerDoubleTapLike();
+      } else {
+        tapTimeout.current = setTimeout(() => {
+          togglePlay();
+          tapTimeout.current = null;
+        }, 300);
+      }
     }
   };
   
   return (
     <div 
-        className="w-full h-full relative bg-black grid place-items-center" 
+        className={cn("w-full h-full relative bg-black grid place-items-center", !isPreviewing && "cursor-pointer")} 
         onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
     >
       <video
@@ -260,26 +320,47 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         className="w-full h-full object-cover col-start-1 row-start-1"
         poster={item.thumbnailUrl}
         data-ai-hint="short form video"
+        // Mute video while scrubbing for a better UX
+        muted={isPreviewing}
       />
 
       {showHeart && (
           <Heart fill="white" className="h-24 w-24 text-white col-start-1 row-start-1 z-20 pointer-events-none animate-like-heart" />
       )}
       
-      {!isPlaying && (
+      {!isPlaying && !isPreviewing && (
           <Play className="h-20 w-20 text-white/70 pointer-events-none col-start-1 row-start-1 z-20" fill="white" />
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none col-start-1 row-start-1 z-10" />
-      <VideoInfo item={item} />
-      <VideoActions 
-        item={item} 
-        isLiked={isLiked} 
-        likeCount={likeCount} 
-        handleLikeClick={handleLikeClick}
-        isCommentSheetOpen={isCommentSheetOpen}
-        setIsCommentSheetOpen={setIsCommentSheetOpen}
-        videoOwnerId={item.user.id}
-      />
+
+      {!isPreviewing && (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none col-start-1 row-start-1 z-10" />
+            <VideoInfo item={item} />
+            <VideoActions 
+                item={item} 
+                isLiked={isLiked} 
+                likeCount={likeCount} 
+                handleLikeClick={handleLikeClick}
+                isCommentSheetOpen={isCommentSheetOpen}
+                setIsCommentSheetOpen={setIsCommentSheetOpen}
+                videoOwnerId={item.user.id}
+            />
+          </>
+      )}
+
+      {isPreviewing && (
+        <div className="absolute bottom-4 left-4 right-4 z-30 px-2">
+            <Slider
+                value={[videoProgress]}
+                onValueChange={(value) => {
+                    if (videoRef.current && videoRef.current.duration) {
+                        const newTime = (value[0] / 100) * videoRef.current.duration;
+                        videoRef.current.currentTime = newTime;
+                    }
+                }}
+            />
+        </div>
+      )}
     </div>
   );
 }
