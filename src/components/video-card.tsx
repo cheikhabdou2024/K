@@ -4,11 +4,20 @@
 import type { FeedItem } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
-import { Heart, MessageCircle, Send, Music, Play } from 'lucide-react';
+import { Heart, MessageCircle, Send, Music, Play, Settings } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { CommentSheet } from './comment-sheet';
 import { Slider } from './ui/slider';
+import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 
 interface VideoActionsProps {
@@ -22,9 +31,11 @@ interface VideoActionsProps {
   isCommentSheetOpen: boolean;
   setIsCommentSheetOpen: (open: boolean) => void;
   videoOwnerId: string;
+  selectedQuality: string;
+  onQualityChange: (quality: string) => void;
 }
 
-const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentSheetOpen, setIsCommentSheetOpen, videoOwnerId }: VideoActionsProps) => {
+const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentSheetOpen, setIsCommentSheetOpen, videoOwnerId, selectedQuality, onQualityChange }: VideoActionsProps) => {
   const [formattedLikeCount, setFormattedLikeCount] = useState('');
   const [formattedCommentCount, setFormattedCommentCount] = useState('');
   const [formattedShareCount, setFormattedShareCount] = useState('');
@@ -75,6 +86,28 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
         <Send className="h-8 w-8 text-white" />
         <span className="text-xs">{formattedShareCount}</span>
       </Button>
+       <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
+          >
+            <Settings className="h-8 w-8 text-white" />
+            <span className="text-xs">{selectedQuality === 'Auto' ? 'Auto' : selectedQuality.replace('p', '')}</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="bg-black/70 border-white/30 text-white min-w-[120px]">
+          <DropdownMenuLabel>Quality</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={selectedQuality} onValueChange={onQualityChange}>
+            {['Auto', '1080p', '720p', '360p'].map((q) => (
+              <DropdownMenuRadioItem key={q} value={q}>
+                {q}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };
@@ -123,6 +156,8 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   const wasPlayingBeforeCommentOpen = useRef(false);
 
   const [videoProgress, setVideoProgress] = useState(0);
+  const { toast } = useToast();
+  const [quality, setQuality] = useState('Auto');
 
   // State and refs for pinch-to-zoom
   const [scale, setScale] = useState(1);
@@ -329,6 +364,16 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     pointerStartRef.current = null;
   };
   
+  const handleQualityChange = (newQuality: string) => {
+    setQuality(newQuality);
+    // In a real app, you would change the video source here.
+    // For this demo, we'll just show a toast.
+    toast({
+      title: "Quality Changed (Demo)",
+      description: `Video quality has been set to ${newQuality}.`,
+    });
+  };
+
   return (
     <div 
         className="w-full h-full relative bg-black grid place-items-center cursor-pointer touch-none overflow-hidden"
@@ -369,6 +414,8 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
           isCommentSheetOpen={isCommentSheetOpen}
           setIsCommentSheetOpen={setIsCommentSheetOpen}
           videoOwnerId={item.user.id}
+          selectedQuality={quality}
+          onQualityChange={handleQualityChange}
       />
       
       {!isPlaying && isActive && (
