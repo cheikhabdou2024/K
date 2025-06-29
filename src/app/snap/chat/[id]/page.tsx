@@ -36,6 +36,24 @@ export default function ChatPage() {
 
   useEffect(() => {
     scrollToBottom();
+
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage && lastMessage.sender === 'me') {
+      const timer = setTimeout(() => {
+        const replyMessage = {
+          id: messages.length + 1,
+          text: 'This is a simulated reply! I am just a bot.',
+          sender: 'them' as const,
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        };
+        setMessages((prev) => [...prev, replyMessage]);
+      }, 1500); // 1.5-second delay for a more natural feel
+
+      return () => clearTimeout(timer);
+    }
   }, [messages]);
 
   const handleSendMessage = (e: React.FormEvent) => {

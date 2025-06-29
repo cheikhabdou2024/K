@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -9,7 +10,7 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from './ui/button';
 import { MessageCircle, Mic, Send, Trash2, Play, Pause, Square, Loader2 } from 'lucide-react';
-import { mockComments } from '@/lib/mock-data';
+import { mockComments, mockMe, type Comment } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
@@ -79,6 +80,7 @@ export function CommentSheet({
   children: React.ReactNode;
 }) {
   const { toast } = useToast();
+  const [comments, setComments] = useState(mockComments);
   const [isRecording, setIsRecording] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [audioURL, setAudioURL] = useState<string | null>(null);
@@ -149,16 +151,29 @@ export function CommentSheet({
     setIsSending(true);
     try {
       let result;
+      let newCommentData: { text?: string; audioUrl?: string } = {};
+
       if (audioURL) {
-        const audioBlob = await fetch(audioURL).then(res => res.blob());
+        const audioBlob = await fetch(audioURL).then((res) => res.blob());
         const audioDataUri = await blobToDataUri(audioBlob);
         result = await scanCommentAction(audioDataUri, 'audio');
+        newCommentData.audioUrl = audioDataUri;
       } else {
         result = await scanCommentAction(commentText, 'text');
+        newCommentData.text = commentText;
       }
 
       if (result.isSafe) {
         toast({ title: 'Success', description: 'Comment sent!' });
+        
+        const newComment: Comment = {
+          id: `comment-${Date.now()}`,
+          user: mockMe,
+          timestamp: 'Just now',
+          ...newCommentData,
+        };
+        setComments(prev => [newComment, ...prev]);
+
         discardRecording();
         setCommentText('');
       } else {
@@ -187,11 +202,11 @@ export function CommentSheet({
         className="h-[80%] flex flex-col rounded-t-2xl"
       >
         <SheetHeader className="text-center">
-          <SheetTitle className="font-headline">{commentCount} Comments</SheetTitle>
+          <SheetTitle className="font-headline">{comments.length} Comments</SheetTitle>
         </SheetHeader>
         <ScrollArea className="flex-1 my-4">
           <div className="space-y-4 pr-4">
-            {mockComments.map((comment) => (
+            {comments.map((comment) => (
               <div key={comment.id} className="flex items-start gap-3">
                 <Avatar>
                   <AvatarImage src={comment.user.avatarUrl} />
