@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Video, Settings, Edit, Share2, Heart, LineChart, LogOut } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { useToast } from '@/hooks/use-toast';
@@ -92,6 +92,9 @@ const VideoGrid = ({ items }: { items: FeedItem[] }) => (
 const chartConfig = {
   views: { label: 'Views', color: 'hsl(var(--chart-1))' },
   likes: { label: 'Likes', color: 'hsl(var(--chart-2))' },
+  Positive: { label: 'Positive', color: 'hsl(var(--chart-2))' },
+  Neutral: { label: 'Neutral', color: 'hsl(var(--chart-4))' },
+  Negative: { label: 'Negative', color: 'hsl(var(--chart-5))' },
 } satisfies ChartConfig;
 
 const AnalyticsContent = ({ user }: { user: FirestoreUser }) => (
@@ -126,6 +129,35 @@ const AnalyticsContent = ({ user }: { user: FirestoreUser }) => (
             <YAxis />
             <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
             <Bar dataKey="likes" fill="var(--color-likes)" radius={4} />
+          </BarChart>
+        </ChartContainer>
+      </CardContent>
+    </Card>
+     <Card>
+      <CardHeader>
+        <CardTitle>Comment Sentiment Analysis</CardTitle>
+        <CardDescription>Distribution of sentiment in your comments.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ChartContainer config={chartConfig} className="h-[200px] w-full">
+          <BarChart layout="vertical" accessibilityLayer data={user.analytics.commentSentiment}>
+            <CartesianGrid horizontal={false} />
+            <YAxis
+              dataKey="sentiment"
+              type="category"
+              tickLine={false}
+              tickMargin={10}
+              axisLine={false}
+              tickFormatter={(value) => chartConfig[value as keyof typeof chartConfig]?.label || value}
+              width={80}
+            />
+            <XAxis dataKey="count" type="number" hide />
+            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+            <Bar dataKey="count" layout="vertical" radius={4}>
+               {user.analytics.commentSentiment.map((entry) => (
+                <Cell key={`cell-${entry.sentiment}`} fill={`var(--color-${entry.sentiment})`} />
+              ))}
+            </Bar>
           </BarChart>
         </ChartContainer>
       </CardContent>

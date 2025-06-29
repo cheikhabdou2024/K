@@ -20,6 +20,7 @@ export interface FirestoreUser extends User {
   analytics: {
     profileViews: { day: string; views: number }[];
     monthlyLikes: { month: string; likes: number }[];
+    commentSentiment: { sentiment: string; count: number }[];
   };
 }
 
@@ -113,6 +114,11 @@ export const mockMe: FirestoreUser = {
       { month: 'Apr', likes: 31000 },
       { month: 'May', likes: 29000 },
       { month: 'Jun', likes: 42000 },
+    ],
+    commentSentiment: [
+      { sentiment: 'Positive', count: 1253 },
+      { sentiment: 'Neutral', count: 489 },
+      { sentiment: 'Negative', count: 132 },
     ],
   },
 };
