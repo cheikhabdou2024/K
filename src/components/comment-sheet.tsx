@@ -9,7 +9,7 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { Button } from './ui/button';
-import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark, Crown, CheckCircle2 } from 'lucide-react';
+import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark, Crown, CheckCircle2, Ban } from 'lucide-react';
 import { mockComments, mockMe, type Comment as CommentType } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
@@ -375,7 +375,8 @@ export function CommentSheet({
   }
   
   const handleSend = async ({ text, audioUrl }: { text?: string; audioUrl?: string }) => {
-    if (!text?.trim() && !audioUrl) {
+    const contentToScan = text || '';
+    if (!contentToScan && !audioUrl) {
         setIsSending(false);
         cleanupRecording();
         return;
@@ -384,8 +385,7 @@ export function CommentSheet({
     if(!audioUrl) setIsSending(true);
 
     try {
-      const scanContent = text || audioUrl || '';
-      const result = await scanCommentAction(scanContent);
+      const result = await scanCommentAction(contentToScan);
 
       if (result.isSafe) {
         const newComment: CommentType = {
@@ -428,8 +428,13 @@ export function CommentSheet({
       } else {
         toast({
           variant: 'destructive',
-          title: 'Content moderation error',
-          description: result.reason,
+          title: (
+            <div className="flex items-center gap-2">
+              <Ban className="h-5 w-5" />
+              <span>Content Not Allowed</span>
+            </div>
+          ),
+          description: result.reason || "This comment violates our community guidelines.",
         });
       }
     } catch (error) {

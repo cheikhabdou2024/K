@@ -7,8 +7,19 @@ import { speechToText, SpeechToTextOutput } from '@/ai/flows/ai-speech-to-text-f
 export async function scanCommentAction(
   content: string
 ): Promise<AiContentScanOutput> {
-  // Bypassing content scan for demo purposes to ensure a smooth UX.
-  return { isSafe: true, reason: '' };
+  if (!content.trim()) {
+    return { isSafe: true };
+  }
+  
+  try {
+    const result = await aiContentScan({ content, contentType: 'text' });
+    return result;
+  } catch (error) {
+    console.error('Error during AI content scan:', error);
+    // In case of an error, default to safe to not block users unnecessarily.
+    // A more robust system might have different fallback logic.
+    return { isSafe: true };
+  }
 }
 
 export async function transcribeAudioAction(
