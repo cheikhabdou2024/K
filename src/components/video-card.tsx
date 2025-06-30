@@ -314,8 +314,8 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     
     // Playback Speed Logic
     const videoWidth = videoRef.current?.clientWidth || window.innerWidth;
-    const isRightSide = e.clientX > videoWidth * 0.75;
-    const isLeftSide = e.clientX < videoWidth * 0.25;
+    const isRightSide = e.clientX > videoWidth * 0.85; // Right 15%
+    const isLeftSide = e.clientX < videoWidth * 0.15; // Left 15%
 
     if (pointersRef.current.size === 1 && scale === 1 && (isRightSide || isLeftSide)) {
         if (!isPlaying) togglePlay(); // Play the video if it's paused
