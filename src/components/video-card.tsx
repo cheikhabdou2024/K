@@ -59,16 +59,16 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
         notation: 'compact',
         maximumFractionDigits: 1,
       });
-      setFormattedLikeCount(formatter.format(likeCount));
-      setFormattedCommentCount(formatter.format(item.comments));
-      setFormattedShareCount(formatter.format(item.shares));
-      setFormattedViewCount(formatter.format(viewCount));
+      setFormattedLikeCount(formatter.format(likeCount || 0));
+      setFormattedCommentCount(formatter.format(item.comments || 0));
+      setFormattedShareCount(formatter.format(item.shares || 0));
+      setFormattedViewCount(formatter.format(viewCount || 0));
     } catch (e) {
       // Fallback for older environments that may not support the notation option.
-      setFormattedLikeCount(likeCount.toLocaleString());
-      setFormattedCommentCount(item.comments.toLocaleString());
-      setFormattedShareCount(item.shares.toLocaleString());
-      setFormattedViewCount(viewCount.toLocaleString());
+      setFormattedLikeCount((likeCount || 0).toLocaleString());
+      setFormattedCommentCount((item.comments || 0).toLocaleString());
+      setFormattedShareCount((item.shares || 0).toLocaleString());
+      setFormattedViewCount((viewCount || 0).toLocaleString());
     }
   }, [likeCount, item.comments, item.shares, viewCount]);
 
@@ -76,7 +76,7 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
   return (
     <div className="absolute bottom-20 right-2 flex flex-col gap-4 z-20" onClick={(e) => e.stopPropagation()}>
       <div className="flex flex-col items-center h-auto text-white">
-        <Eye className="h-8 w-8 text-white" />
+        <Eye className="h-6 w-6 text-white" />
         <span className="text-xs">{formattedViewCount}</span>
       </div>
       <Button
@@ -86,7 +86,7 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
         onClick={handleLikeClick}
       >
         <Heart 
-          className={cn("h-8 w-8 text-white transition-all active:scale-125", isLiked && "fill-red-500 text-red-500")}
+          className={cn("h-6 w-6 text-white transition-all active:scale-125", isLiked && "fill-red-500 text-red-500")}
         />
         <span className="text-xs">{formattedLikeCount}</span>
       </Button>
@@ -101,7 +101,7 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
           size="icon"
           className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
         >
-          <MessageCircle className="h-8 w-8 text-white" />
+          <MessageCircle className="h-6 w-6 text-white" />
           <span className="text-xs">{formattedCommentCount}</span>
         </Button>
       </CommentSheet>
@@ -110,7 +110,7 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
         size="icon"
         className="flex flex-col h-auto text-white hover:bg-transparent hover:text-white"
       >
-        <Send className="h-8 w-8 text-white" />
+        <Send className="h-6 w-6 text-white" />
         <span className="text-xs">{formattedShareCount}</span>
       </Button>
     </div>
@@ -637,7 +637,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         </div>
         <div
             className={cn(
-                "h-6 px-4 flex items-center transition-opacity duration-300",
+                "h-2 px-4 flex items-center transition-opacity duration-300",
                 !isPlaying && isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'
             )}
             onClick={(e) => e.stopPropagation()}
