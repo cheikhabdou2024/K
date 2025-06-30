@@ -4,7 +4,7 @@
 import type { FeedItem, User, Product } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
-import { Heart, MessageCircle, Send, Play, Settings, Plus, Eye, PictureInPicture2, ShoppingBag, Download, FastForward, Rewind } from 'lucide-react';
+import { Heart, MessageCircle, Send, Play, Settings, Plus, Eye, PictureInPicture2, ShoppingBag, Download } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { CommentSheet } from './comment-sheet';
@@ -68,7 +68,7 @@ const VideoActions = ({ item, isLiked, likeCount, handleLikeClick, isCommentShee
       setFormattedLikeCount((likeCount || 0).toLocaleString());
       setFormattedCommentCount((item.comments || 0).toLocaleString());
       setFormattedShareCount((item.shares || 0).toLocaleString());
-      setFormattedViewCount((viewCount || 0).toLocaleString());
+      setFormattedViewCount((viewCount || 0).toLocaleString() || '12K');
     }
   }, [likeCount, item.comments, item.shares, viewCount]);
 
@@ -182,12 +182,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
   const initialPinchDistanceRef = useRef(0);
   const wasGestureActiveRef = useRef(false);
   const lastScaleRef = useRef(1);
-
-  // Playback speed
-  const [playbackRate, setPlaybackRate] = useState(1);
-  const [showSpeed, setShowSpeed] = useState(false);
-  const speedCycleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const speedDisplayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
     // Check for Picture-in-Picture support on the client
@@ -206,8 +200,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
       } else {
         video.pause();
         video.currentTime = 0;
-        video.playbackRate = 1; // Reset playback speed
-        setPlaybackRate(1);
         setIsPlaying(false);
         setIsCommentSheetOpen(false);
         // Reset zoom and other states when video becomes inactive
@@ -221,8 +213,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
       if (tapTimeout.current) clearTimeout(tapTimeout.current);
       if (heartAnimationTimeout.current) clearTimeout(heartAnimationTimeout.current);
       if (optionsMenuTimeoutRef.current) clearTimeout(optionsMenuTimeoutRef.current);
-      if (speedCycleTimeoutRef.current) clearTimeout(speedCycleTimeoutRef.current);
-      if (speedDisplayTimeoutRef.current) clearTimeout(speedDisplayTimeoutRef.current);
     };
   }, [isActive]);
 
@@ -243,13 +233,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
         video.removeEventListener('timeupdate', updateProgress);
     };
   }, []);
-
-  // Sync React state with video element property
-  useEffect(() => {
-    if (videoRef.current) {
-        videoRef.current.playbackRate = playbackRate;
-    }
-  }, [playbackRate]);
 
 
   useEffect(() => {
@@ -312,34 +295,7 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     wasLongPress.current = false;
     pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     
-    // Playback Speed Logic
-    const videoWidth = videoRef.current?.clientWidth || window.innerWidth;
-    const isRightSide = e.clientX > videoWidth * 0.85; // Right 15%
-    const isLeftSide = e.clientX < videoWidth * 0.15; // Left 15%
-
-    if (pointersRef.current.size === 1 && scale === 1 && (isRightSide || isLeftSide)) {
-        if (!isPlaying) togglePlay(); // Play the video if it's paused
-        
-        speedCycleTimeoutRef.current = setTimeout(() => {
-            wasLongPress.current = true; // Mark as long press to prevent tap action
-            const speedLevels = [0.5, 1.0, 1.25, 1.5, 2.0];
-            const direction = isRightSide ? 1 : -1;
-            
-            const cycleSpeed = () => {
-                setPlaybackRate(currentRate => {
-                    const currentIndex = speedLevels.indexOf(currentRate);
-                    const nextIndex = Math.max(0, Math.min(speedLevels.length - 1, currentIndex + direction));
-                    return speedLevels[nextIndex];
-                });
-                setShowSpeed(true);
-            };
-            cycleSpeed(); // Initial change
-            
-            if (speedCycleTimeoutRef.current) clearTimeout(speedCycleTimeoutRef.current);
-            speedCycleTimeoutRef.current = setInterval(cycleSpeed, 500); // Cycle every 500ms
-
-        }, 300); // 300ms delay before speed control activates
-    } else if (pointersRef.current.size === 1) {
+    if (pointersRef.current.size === 1) {
         pointerStartRef.current = { x: e.clientX, y: e.clientY };
         
         optionsMenuTimeoutRef.current = setTimeout(() => {
@@ -356,7 +312,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     if (pointersRef.current.size === 2) {
         if (tapTimeout.current) clearTimeout(tapTimeout.current);
         if (optionsMenuTimeoutRef.current) clearTimeout(optionsMenuTimeoutRef.current);
-        if (speedCycleTimeoutRef.current) clearTimeout(speedCycleTimeoutRef.current);
 
         const points = Array.from(pointersRef.current.values());
         initialPinchDistanceRef.current = getDistance(points[0] as any, points[1] as any);
@@ -409,12 +364,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     pointersRef.current.delete(e.pointerId);
 
     if (optionsMenuTimeoutRef.current) clearTimeout(optionsMenuTimeoutRef.current);
-    if (speedCycleTimeoutRef.current) {
-        clearTimeout(speedCycleTimeoutRef.current);
-        speedCycleTimeoutRef.current = null;
-        if (speedDisplayTimeoutRef.current) clearTimeout(speedDisplayTimeoutRef.current);
-        speedDisplayTimeoutRef.current = setTimeout(() => setShowSpeed(false), 1000);
-    }
     
     if (wasLongPress.current) {
         if(pointersRef.current.size < 1) pointerStartRef.current = null;
@@ -548,14 +497,6 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
                 videoOwnerId={item.user.id}
                 viewCount={item.views}
             />
-
-            {showSpeed && (
-                <div className="absolute inset-0 grid place-items-center z-30 pointer-events-none">
-                    <div className="bg-black/50 text-white font-bold text-2xl px-4 py-2 rounded-full animate-pulse">
-                        {playbackRate.toFixed(2)}x
-                    </div>
-                </div>
-            )}
 
             <Dialog open={isOptionsDialogOpen} onOpenChange={setIsOptionsDialogOpen}>
                 <DialogContent className="bg-black/80 border-white/20 text-white" onClick={(e) => e.stopPropagation()}>
