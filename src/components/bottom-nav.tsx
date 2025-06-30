@@ -31,7 +31,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="h-14 bg-background border-t border-border z-50 shrink-0">
+    <nav id="bottom-nav" className="h-12 bg-background border-t border-border z-50 shrink-0">
       <div className="flex justify-around items-center h-full max-w-lg mx-auto">
         {navItems.map((item) => {
           if (item.href === '/create') {

@@ -539,8 +539,6 @@ export function CommentSheet({
       <DrawerTrigger asChild>{children}</DrawerTrigger>
       <DrawerContent
         className="h-[60%] flex flex-col z-[70]"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
       >
         <DrawerHeader className="p-4 pb-2">
             <div className="flex justify-between items-center gap-2">
@@ -565,7 +563,11 @@ export function CommentSheet({
                 </div>
             </div>
         </DrawerHeader>
-        <ScrollArea className="flex-1 my-2">
+        <ScrollArea
+          className="flex-1 my-2"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
             <div className="space-y-4 p-4">
                 {commentThreads.map((thread) => {
                     const REPLIES_PREVIEW_COUNT = 2;
@@ -632,7 +634,11 @@ export function CommentSheet({
                 })}
             </div>
         </ScrollArea>
-        <div className="p-4 bg-background border-t">
+        <div
+          className="p-4 bg-background border-t"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           {isModMode ? (
             selectedComments.size > 0 ? (
                  <div className="flex items-center justify-between h-10">
