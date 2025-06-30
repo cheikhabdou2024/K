@@ -2,7 +2,7 @@
 'use server';
 
 import { AiContentScanOutput } from '@/ai/flows/ai-content-scanning';
-import { speechToText, SpeechToTextOutput } from '@/ai/flows/ai-speech-to-text-flow';
+import { generateTextToSpeech, TextToSpeechOutput } from '@/ai/flows/ai-text-to-speech-flow';
 
 export async function scanCommentAction(
   content: string
@@ -12,18 +12,19 @@ export async function scanCommentAction(
   return { isSafe: true };
 }
 
-export async function transcribeAudioAction(
-  audioDataUri: string
-): Promise<SpeechToTextOutput> {
-  if (!audioDataUri) {
-    return { transcription: '' };
+
+export async function generateTtsAction(
+  text: string
+): Promise<TextToSpeechOutput> {
+  if (!text) {
+    return { audioDataUri: '' };
   }
   try {
-    const result = await speechToText({ audioDataUri });
+    const result = await generateTextToSpeech({ text });
     return result;
   } catch (error) {
-    console.error('Error during AI transcription:', error);
-    // In case of an error, return an empty transcription to avoid breaking the UI
-    return { transcription: '' };
+    console.error('Error during AI TTS generation:', error);
+    // In case of an error, return an empty data URI to avoid breaking the UI
+    return { audioDataUri: '' };
   }
 }

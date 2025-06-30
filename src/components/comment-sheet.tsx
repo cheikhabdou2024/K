@@ -9,14 +9,14 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { Button } from './ui/button';
-import { Heart, Send, Loader2, Mic, Trash2, Play, Pause, Bookmark, Crown, CheckCircle2, Pin, MessageSquareReply, ChevronDown, Smile, Sparkles, Shield, CalendarClock } from 'lucide-react';
+import { Heart, Send, Loader2, Trash2, Pause, Bookmark, Crown, CheckCircle2, Pin, ChevronDown, Smile, Sparkles, Shield, CalendarClock, Volume2 } from 'lucide-react';
 import { mockComments, mockMe, type Comment as CommentType } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { scanCommentAction, transcribeAudioAction } from '@/app/comments/actions';
+import { scanCommentAction, generateTtsAction } from '@/app/comments/actions';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import ReactMarkdown from 'react-markdown';
@@ -26,94 +26,55 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from './ui/checkbox';
 import { Calendar } from './ui/calendar';
 
-const blobToDataUri = (blob: Blob) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      resolve(reader.result as string);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-
-const AudioPlayer = ({ audioUrl }: { audioUrl: string }) => {
-  const audioRef = useRef<HTMLAudioElement>(null);
+const TtsPlayer = ({ audioUrl }: { audioUrl: string }) => {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
 
-  const togglePlayPause = (e: React.MouseEvent) => {
+  const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
+    if (!audioRef.current) {
+      audioRef.current = new Audio(audioUrl);
+      audioRef.current.onended = () => {
+        setIsPlaying(false);
+        // Ensure the audio element is reset for the next play
+        if(audioRef.current) audioRef.current.currentTime = 0;
+      };
+    }
+    
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.currentTime = 0; // Always play from the start
+      audioRef.current.play();
+      setIsPlaying(true);
     }
   };
-
+  
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const updateProgress = () => {
-      setProgress((audio.currentTime / audio.duration) * 100 || 0);
-    };
-    const handleEnded = () => {
-        setIsPlaying(false);
-        setProgress(0);
-    };
-
-    audio.addEventListener('timeupdate', updateProgress);
-    audio.addEventListener('ended', handleEnded);
+    // Cleanup audio element on component unmount
     return () => {
-      audio.removeEventListener('timeupdate', updateProgress);
-      audio.removeEventListener('ended', handleEnded);
-    };
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = ''; // Release memory
+        audioRef.current = null;
+      }
+    }
   }, []);
 
-  const SoundWave = () => (
-    <svg width="100" height="24" viewBox="0 0 100 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <line x1="2" y1="10" x2="2" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="6" y1="8" x2="6" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="10" y1="10" x2="10" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="14" y1="6" x2="14" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="18" y1="11" x2="18" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="22" y1="8" x2="22" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="26" y1="4" x2="26" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="30" y1="10" x2="30" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="34" y1="8" x2="34" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="38" y1="6" x2="38" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="42" y1="11" x2="42" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="46" y1="4" x2="46" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="50" y1="8" x2="50" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="54" y1="10" x2="54" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="58" y1="6" x2="58" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="62" y1="8" x2="62" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="66" y1="4" x2="66" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="70" y1="11" x2="70" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="74" y1="6" x2="74" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="78" y1="10" x2="78" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="82" y1="8" x2="82" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="86" y1="4" x2="86" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="90" y1="8" x2="90" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="94" y1="10" x2="94" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="98" y1="10" x2="98" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    </svg>
-  );
-
   return (
-    <div className="flex items-center gap-2 p-1.5 pr-3 rounded-full bg-primary/10 w-fit">
-      <audio ref={audioRef} src={audioUrl} preload="metadata" />
-      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90" onClick={togglePlayPause} aria-label={isPlaying ? 'Pause audio comment' : 'Play audio comment'}>
-        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
-      </Button>
-      <div className="relative w-[100px] h-[24px]">
-        <div className="absolute inset-0 text-primary/30"><SoundWave /></div>
-        <div className="absolute inset-0 h-full overflow-hidden text-primary" style={{ width: `${progress}%` }}><SoundWave /></div>
-      </div>
-    </div>
+    <Button
+      variant="ghost"
+      size="icon"
+      className={cn(
+        "h-7 w-7 rounded-full text-primary hover:bg-primary/10",
+        isPlaying && 'bg-primary/20'
+      )}
+      onClick={togglePlay}
+      aria-label={isPlaying ? "Pause audio" : "Play comment text"}
+    >
+      {isPlaying ? <Pause className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+    </Button>
   );
 };
 
@@ -206,32 +167,31 @@ const CommentItem = ({
                     Replying to <span className="text-primary hover:underline cursor-pointer">@{comment.replyTo.username}</span>
                 </p>
             )}
-            {comment.audioUrl && <AudioPlayer audioUrl={comment.audioUrl} />}
-            {comment.text && (
-              <div className={cn(
-                'break-words',
-                comment.audioUrl ? 'pt-2 mt-2 border-t border-primary/20 text-muted-foreground' : ''
-              )}>
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    p: ({node, ...props}) => <p className="m-0" {...props} />,
-                    a: ({node, ...props}) => (
-                      <a className="text-primary font-semibold hover:underline cursor-pointer" {...props} />
-                    ),
-                    code: ({node, inline, className, children, ...props}) => {
-                      if (inline) {
-                        return <code className="bg-primary/10 text-primary px-1 py-0.5 rounded-sm font-mono text-sm" {...props}>{children}</code>
-                      }
-                      return <code className={cn("font-mono", className)} {...props}>{children}</code>
-                    },
-                    pre: ({node, ...props}) => <pre className="bg-secondary p-2 rounded-md my-2 text-xs overflow-x-auto" {...props} />
-                  }}
-                >
-                  {comment.text.replace(/@(\w+)/g, '[@$1](/profile/$1)')}
-                </ReactMarkdown>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {comment.text && (
+                <div className='break-words'>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      p: ({node, ...props}) => <p className="m-0" {...props} />,
+                      a: ({node, ...props}) => (
+                        <a className="text-primary font-semibold hover:underline cursor-pointer" {...props} />
+                      ),
+                      code: ({node, inline, className, children, ...props}) => {
+                        if (inline) {
+                          return <code className="bg-primary/10 text-primary px-1 py-0.5 rounded-sm font-mono text-sm" {...props}>{children}</code>
+                        }
+                        return <code className={cn("font-mono", className)} {...props}>{children}</code>
+                      },
+                      pre: ({node, ...props}) => <pre className="bg-secondary p-2 rounded-md my-2 text-xs overflow-x-auto" {...props} />
+                    }}
+                  >
+                    {comment.text.replace(/@(\w+)/g, '[@$1](/profile/$1)')}
+                  </ReactMarkdown>
+                </div>
+              )}
+              {comment.audioUrl && <TtsPlayer audioUrl={comment.audioUrl} />}
+            </div>
         </div>
         <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground px-2">
           <span>{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}</span>
@@ -260,23 +220,6 @@ const CommentItem = ({
     </div>
   );
 };
-
-const AnimatedSoundWave = () => (
-    <div className="flex items-center gap-0.5 h-4">
-        {Array.from({length: 7}).map((_, i) => (
-            <div key={i} className="w-0.5 bg-primary/80" style={{ animation: `sound-wave 1.2s ease-in-out infinite`, animationDelay: `${i * 0.1}s`, height: '100%' }}></div>
-        ))}
-        <style jsx>{`
-            @keyframes sound-wave {
-                0% { transform: scaleY(0.3); }
-                25% { transform: scaleY(1); }
-                50% { transform: scaleY(0.4); }
-                75% { transform: scaleY(0.8); }
-                100% { transform: scaleY(0.3); }
-            }
-        `}</style>
-    </div>
-)
 
 const emojiCategories = [
   {
@@ -325,14 +268,6 @@ export function CommentSheet({
   const [isModMode, setIsModMode] = useState(false);
   const [selectedComments, setSelectedComments] = useState<Set<string>>(new Set());
   const isViewingUserCreator = videoOwnerId === mockMe.id;
-
-  // Audio recording state
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
   
   // Scheduling state
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
@@ -422,105 +357,19 @@ export function CommentSheet({
     });
   };
 
-  const formatTime = (time: number) => new Date(time * 1000).toISOString().substr(14, 5);
-
-  const cleanupRecording = () => {
-      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-          mediaRecorderRef.current.stop();
-      }
-      setIsRecording(false);
-      setIsPaused(false);
-      setRecordingTime(0);
-      audioChunksRef.current = [];
-  }
-
-  const handleStartRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
-      audioChunksRef.current = [];
-
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
-      };
-
-      mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        stream.getTracks().forEach(track => track.stop());
-
-        try {
-            setIsSending(true);
-            const audioDataUri = await blobToDataUri(audioBlob);
-            const { transcription } = await transcribeAudioAction(audioDataUri);
-            await handleSend({ audioUrl, text: transcription });
-        } catch (error) {
-            toast({
-                variant: 'destructive',
-                title: 'Transcription Failed',
-                description: 'Sending audio comment without transcription.',
-            });
-            await handleSend({ audioUrl });
-        } finally {
-            setIsSending(false);
-            cleanupRecording();
-        }
-      };
-      
-      mediaRecorderRef.current.start();
-      setIsRecording(true);
-      recordingTimerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-
-    } catch (err) {
-      toast({
-        variant: 'destructive',
-        title: 'Microphone access denied',
-        description: 'Please allow microphone access in your browser settings.',
-      });
-    }
-  };
-  
-  const handlePauseRecording = () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          mediaRecorderRef.current.pause();
-          setIsPaused(true);
-          if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-      }
-  }
-
-  const handleResumeRecording = () => {
-       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'paused') {
-          mediaRecorderRef.current.resume();
-          setIsPaused(false);
-          recordingTimerRef.current = setInterval(() => {
-            setRecordingTime(prev => prev + 1);
-          }, 1000);
-      }
-  }
-
-  const handleStopAndSend = () => {
-      if (mediaRecorderRef.current?.state !== 'inactive') {
-          mediaRecorderRef.current?.stop();
-      }
-  }
-  
-  const handleCancelRecording = () => {
-      cleanupRecording();
-  }
-  
-  const handleSend = async ({ text, audioUrl }: { text?: string; audioUrl?: string }) => {
+  const handleSend = async ({ text }: { text?: string; audioUrl?: string }) => {
     const contentToScan = text || '';
-    if (!contentToScan && !audioUrl) {
+    if (!contentToScan) {
       return;
     }
 
     setIsSending(true);
 
     try {
-      const scanResult = await scanCommentAction(contentToScan);
+      const [scanResult, ttsResult] = await Promise.all([
+        scanCommentAction(contentToScan),
+        generateTtsAction(contentToScan),
+      ]);
 
       if (!scanResult.isSafe) {
         toast({
@@ -536,8 +385,8 @@ export function CommentSheet({
         user: mockMe,
         createdAt: new Date(),
         likes: 0,
-        ...(text && { text }),
-        ...(audioUrl && { audioUrl }),
+        text: contentToScan,
+        audioUrl: ttsResult.audioDataUri,
         ...(replyingTo && {
           replyTo: replyingTo.user,
           parentId: replyingTo.parentId || replyingTo.id, // Reply to parent thread
@@ -565,6 +414,7 @@ export function CommentSheet({
   
   const handleFormSubmit = (e: React.FormEvent) => {
       e.preventDefault();
+      if (!commentText.trim()) return;
       handleSend({ text: commentText });
   }
   
@@ -766,23 +616,6 @@ export function CommentSheet({
                   </Button>
                 </div>
               )}
-              {isRecording ? (
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={handleCancelRecording} className="text-destructive hover:bg-destructive/10 rounded-full" disabled={isSending} aria-label="Cancel recording">
-                        <Trash2 className="h-5 w-5"/>
-                    </Button>
-                    <div className="flex-1 bg-muted rounded-full h-10 flex items-center justify-between px-4">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-primary" onClick={isPaused ? handleResumeRecording : handlePauseRecording} aria-label={isPaused ? "Resume recording" : "Pause recording"}>
-                            {isPaused ? <Mic className="h-4 w-4" /> : <Pause className="h-4 w-4 fill-current" />}
-                        </Button>
-                        {isPaused ? <p className="text-sm text-muted-foreground">Paused</p> : <AnimatedSoundWave />}
-                        <span className="font-mono text-sm text-muted-foreground">{formatTime(recordingTime)}</span>
-                    </div>
-                    <Button size="icon" onClick={handleStopAndSend} disabled={isSending} className="bg-primary rounded-full" aria-label="Send audio comment">
-                        {isSending ? <Loader2 className="animate-spin" /> : <Send className="h-5 w-5" />}
-                    </Button>
-                </div>
-              ) : (
                  <form onSubmit={handleFormSubmit} className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
                         <AvatarImage src={mockMe.avatarUrl} />
@@ -828,66 +661,59 @@ export function CommentSheet({
                             </PopoverContent>
                         </Popover>
                     </div>
-                    {commentText.trim() ? (
-                        <div className="flex items-center gap-1">
-                            {isViewingUserCreator && (
-                                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                                    <PopoverTrigger asChild>
-                                        <Button type="button" variant="ghost" size="icon" className="rounded-full text-primary hover:bg-primary/10" aria-label="Schedule comment">
-                                            <CalendarClock className="h-5 w-5" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-4 z-[80]">
-                                        <div className="grid gap-4">
-                                            <div className="space-y-2">
-                                                <h4 className="font-medium leading-none">Schedule Response</h4>
-                                                <p className="text-sm text-muted-foreground">
-                                                Select a future date and time to post your comment.
-                                                </p>
-                                            </div>
-                                            <Calendar
-                                                mode="single"
-                                                selected={scheduledDate}
-                                                onSelect={setScheduledDate}
-                                                disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))}
-                                            />
-                                            <Input
-                                                type="time"
-                                                className="w-full"
-                                                onChange={(e) => {
-                                                    if (!e.target.value) return;
-                                                    const [hours, minutes] = e.target.value.split(':').map(Number);
-                                                    const newDate = scheduledDate ? new Date(scheduledDate) : new Date();
-                                                    if (newDate < new Date()) { // if date is in past, set to today
-                                                        newDate.setFullYear(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-                                                    }
-                                                    newDate.setHours(hours, minutes, 0, 0);
-                                                    setScheduledDate(newDate);
-                                                }}
-                                            />
-                                            <Button
-                                                onClick={handleScheduleComment}
-                                                disabled={!scheduledDate || scheduledDate < new Date() || isSending}
-                                                className="w-full"
-                                            >
-                                                {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                                Schedule
-                                            </Button>
+                    <div className="flex items-center gap-1">
+                        {isViewingUserCreator && (
+                            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button type="button" variant="ghost" size="icon" className="rounded-full text-primary hover:bg-primary/10" aria-label="Schedule comment" disabled={!commentText.trim()}>
+                                        <CalendarClock className="h-5 w-5" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-4 z-[80]">
+                                    <div className="grid gap-4">
+                                        <div className="space-y-2">
+                                            <h4 className="font-medium leading-none">Schedule Response</h4>
+                                            <p className="text-sm text-muted-foreground">
+                                            Select a future date and time to post your comment.
+                                            </p>
                                         </div>
-                                    </PopoverContent>
-                                </Popover>
-                            )}
-                            <Button type="submit" size="icon" variant="ghost" className="bg-transparent rounded-full" disabled={isSending} aria-label="Send comment">
-                                {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 text-primary" />}
-                            </Button>
-                        </div>
-                    ) : (
-                         <Button type="button" size="icon" variant="ghost" className="bg-transparent rounded-full" onClick={handleStartRecording} disabled={isSending} aria-label="Record audio comment">
-                            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Mic className="h-5 w-5 text-primary" />}
+                                        <Calendar
+                                            mode="single"
+                                            selected={scheduledDate}
+                                            onSelect={setScheduledDate}
+                                            disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))}
+                                        />
+                                        <Input
+                                            type="time"
+                                            className="w-full"
+                                            onChange={(e) => {
+                                                if (!e.target.value) return;
+                                                const [hours, minutes] = e.target.value.split(':').map(Number);
+                                                const newDate = scheduledDate ? new Date(scheduledDate) : new Date();
+                                                if (newDate < new Date()) { // if date is in past, set to today
+                                                    newDate.setFullYear(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+                                                }
+                                                newDate.setHours(hours, minutes, 0, 0);
+                                                setScheduledDate(newDate);
+                                            }}
+                                        />
+                                        <Button
+                                            onClick={handleScheduleComment}
+                                            disabled={!scheduledDate || scheduledDate < new Date() || isSending}
+                                            className="w-full"
+                                        >
+                                            {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                            Schedule
+                                        </Button>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        )}
+                        <Button type="submit" size="icon" variant="ghost" className="bg-transparent rounded-full" disabled={isSending || !commentText.trim()} aria-label="Send comment">
+                            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 text-primary" />}
                         </Button>
-                    )}
+                    </div>
                 </form>
-              )}
             </>
           )}
         </div>
