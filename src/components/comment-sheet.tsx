@@ -9,7 +9,7 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { Button } from './ui/button';
-import { Heart, Send, Loader2, Trash2, Pause, Bookmark, Crown, CheckCircle2, Pin, ChevronDown, Smile, Sparkles, Shield, CalendarClock, Volume2, Mic, Square } from 'lucide-react';
+import { Heart, Send, Loader2, Trash2, Pause, Bookmark, Crown, CheckCircle2, Pin, ChevronDown, Smile, Sparkles, Shield, CalendarClock, Volume2, Mic, Square, Play, XIcon } from 'lucide-react';
 import { mockComments, mockMe, type Comment as CommentType } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
@@ -26,6 +26,70 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from './ui/checkbox';
 import { Calendar } from './ui/calendar';
 
+
+const StaticAudioVisualizer = ({ barCount = 30 }: { barCount?: number }) => {
+  const bars = useMemo(() => 
+      Array.from({ length: barCount }).map((_, i) => (
+        <div
+          key={i}
+          className="w-0.5 rounded-full bg-primary"
+          style={{ height: `${Math.random() * 60 + 20}%` }}
+        />
+    )), [barCount]);
+
+  return (
+    <div className="flex h-8 items-center justify-center gap-0.5 w-full">
+      {bars}
+    </div>
+  );
+};
+
+
+const AudioPreview = ({ audioUrl, onSend, onDiscard, isSending }: { audioUrl: string; onSend: () => void; onDiscard: () => void; isSending: boolean; }) => {
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+
+    useEffect(() => {
+        audioRef.current = new Audio(audioUrl);
+        audioRef.current.onended = () => setIsPlaying(false);
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                URL.revokeObjectURL(audioUrl); // Clean up the object URL
+            }
+        };
+    }, [audioUrl]);
+
+    const togglePlay = () => {
+        if (!audioRef.current) return;
+        if (isPlaying) {
+            audioRef.current.pause();
+        } else {
+            audioRef.current.currentTime = 0;
+            audioRef.current.play();
+        }
+        setIsPlaying(!isPlaying);
+    };
+
+    return (
+        <div className="flex items-center gap-2 w-full h-10">
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-primary" onClick={onDiscard} disabled={isSending}>
+                <XIcon className="h-5 w-5" />
+            </Button>
+            <div className="flex-1 flex items-center gap-2 bg-muted px-3 rounded-full">
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={togglePlay} disabled={isSending}>
+                    {isPlaying ? <Pause className="h-4 w-4 text-primary" /> : <Play className="h-4 w-4 text-primary" />}
+                </Button>
+                <StaticAudioVisualizer />
+            </div>
+            <Button size="icon" className="bg-primary rounded-full h-9 w-9" onClick={onSend} disabled={isSending}>
+                {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            </Button>
+        </div>
+    );
+};
+
+
 const TtsPlayer = ({ audioUrl }: { audioUrl: string }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -36,7 +100,6 @@ const TtsPlayer = ({ audioUrl }: { audioUrl: string }) => {
       audioRef.current = new Audio(audioUrl);
       audioRef.current.onended = () => {
         setIsPlaying(false);
-        // Ensure the audio element is reset for the next play
         if(audioRef.current) audioRef.current.currentTime = 0;
       };
     }
@@ -45,22 +108,22 @@ const TtsPlayer = ({ audioUrl }: { audioUrl: string }) => {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.currentTime = 0; // Always play from the start
+      audioRef.current.currentTime = 0;
       audioRef.current.play();
       setIsPlaying(true);
     }
   };
   
   useEffect(() => {
-    // Cleanup audio element on component unmount
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.src = ''; // Release memory
         audioRef.current = null;
       }
     }
   }, []);
+
+  if (!audioUrl) return null;
 
   return (
     <Button
@@ -195,7 +258,8 @@ const CommentItem = ({
                   </div>
                 )}
               </div>
-              {comment.audioUrl && <TtsPlayer audioUrl={comment.audioUrl} />}
+              {comment.text && comment.audioUrl && <TtsPlayer audioUrl={comment.audioUrl} />}
+              {!comment.text && comment.audioUrl && <TtsPlayer audioUrl={comment.audioUrl} />}
             </div>
         </div>
         <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground px-2">
@@ -271,8 +335,12 @@ export function CommentSheet({
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [recordedAudio, setRecordedAudio] = useState<{ url: string; blob: Blob } | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout>();
+
 
   // Moderation state
   const [isModMode, setIsModMode] = useState(false);
@@ -311,7 +379,7 @@ export function CommentSheet({
         }
         case 'newest':
         default:
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return new Date(b.createdAt).getTime() - new Date(b.createdAt).getTime();
       }
     });
 
@@ -398,10 +466,9 @@ export function CommentSheet({
         }
 
         newComment = { ...baseComment, text: text, audioUrl: ttsResult.audioDataUri };
-        setCommentText('');
-
+        
       } else if (audioDataUri) {
-        // Here you might want to add audio content scanning in the future
+        // In a real app, you might want to add audio content scanning
         newComment = { ...baseComment, audioUrl: audioDataUri };
       }
 
@@ -411,7 +478,9 @@ export function CommentSheet({
           setExpandedThreads(prev => new Set(prev).add(replyingTo.parentId || replyingTo.id));
         }
       }
+      setCommentText('');
       setReplyingTo(null);
+      setRecordedAudio(null);
 
     } catch (error) {
       toast({
@@ -430,11 +499,7 @@ export function CommentSheet({
       handleSend({ text: commentText });
   }
 
-  const handleMicClick = async () => {
-    if (isRecording) {
-      mediaRecorderRef.current?.stop();
-      setIsRecording(false);
-    } else {
+  const startRecording = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -446,36 +511,58 @@ export function CommentSheet({
 
         mediaRecorderRef.current.onstop = () => {
           const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64String = reader.result as string;
-            handleSend({ audioDataUri: base64String });
-          };
-          reader.readAsDataURL(audioBlob);
+          const audioUrl = URL.createObjectURL(audioBlob);
+          setRecordedAudio({ url: audioUrl, blob: audioBlob });
           stream.getTracks().forEach(track => track.stop());
         };
 
         mediaRecorderRef.current.start();
         setIsRecording(true);
-        toast({ title: "Recording started...", description: "Tap the square to stop and send." });
+        setRecordingTime(0);
+        recordingIntervalRef.current = setInterval(() => {
+            setRecordingTime(prev => prev + 1);
+        }, 1000);
+        toast({ title: "Recording started...", description: "Tap the square to stop." });
       } catch (error) {
         console.error("Mic error:", error);
         toast({ variant: 'destructive', title: "Microphone access denied", description: "Please enable microphone permissions in your browser settings." });
       }
-    }
   };
+
+  const stopRecording = () => {
+      if (mediaRecorderRef.current && isRecording) {
+          mediaRecorderRef.current.stop();
+          setIsRecording(false);
+          if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+      }
+  };
+
+  const handleMicClick = () => {
+      if (isRecording) {
+          stopRecording();
+      } else {
+          startRecording();
+      }
+  }
+
+  const handleSendAudio = () => {
+      if (!recordedAudio) return;
+      const reader = new FileReader();
+      reader.onloadend = () => {
+          const base64String = reader.result as string;
+          handleSend({ audioDataUri: base64String });
+      };
+      reader.readAsDataURL(recordedAudio.blob);
+  }
   
   const handleScheduleComment = async () => {
     if (!commentText.trim() || !scheduledDate) return;
 
     setIsSending(true);
-    setPopoverOpen(false); // Close popover
+    setPopoverOpen(false);
 
     try {
-      // In a real app, this would call a backend service to store the scheduled comment.
-      // For this demo, we just simulate it with a timeout and a toast.
       await new Promise(resolve => setTimeout(resolve, 1000));
-
       toast({
         title: "Comment Scheduled (Demo)",
         description: `Your reply will be posted on ${scheduledDate.toLocaleString()}.`,
@@ -497,7 +584,7 @@ export function CommentSheet({
 
   const toggleModMode = () => {
     setIsModMode(prev => {
-        if (prev) { // if turning off mod mode
+        if (prev) {
             setSelectedComments(new Set());
         }
         return !prev;
@@ -533,18 +620,24 @@ export function CommentSheet({
     setIsModMode(false);
   };
 
+  const formatRecordingTime = (seconds: number) => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+
 
   return (
     <Drawer shouldScaleBackground={false} open={open} onOpenChange={onOpenChange}>
       <DrawerTrigger asChild>{children}</DrawerTrigger>
       <DrawerContent
-        className="h-[60%] flex flex-col z-[70]"
+        className="h-[60%] flex flex-col z-[70] bg-background"
       >
         <DrawerHeader className="p-4 pb-2">
             <div className="flex justify-between items-center gap-2">
                  {isViewingUserCreator ? (
                     <Button variant={isModMode ? "secondary" : "outline"} size="sm" onClick={toggleModMode} className="w-[120px]">
-                        {isModMode ? 'Cancel' : <><Shield className="h-4 w-4" /><span>Moderate</span></>}
+                        {isModMode ? 'Cancel' : <><Shield className="h-4 w-4 mr-2" /><span>Moderate</span></>}
                     </Button>
                 ) : <div className="w-[120px]" /> /* Spacer */}
                 <DrawerTitle className="text-center flex-1">{comments.length.toLocaleString()} Comments</DrawerTitle>
@@ -601,7 +694,7 @@ export function CommentSheet({
                                             comment={reply} 
                                             onReply={setReplyingTo}
                                             videoOwnerId={videoOwnerId}
-                                            isPinned={false} // Replies cannot be pinned directly
+                                            isPinned={false}
                                             onPinComment={handlePinComment}
                                             isViewingUserCreator={isViewingUserCreator}
                                             isModMode={isModMode}
@@ -658,6 +751,34 @@ export function CommentSheet({
                     Select comments to moderate.
                 </div>
             )
+          ) : recordedAudio ? (
+                <AudioPreview 
+                    audioUrl={recordedAudio.url} 
+                    onSend={handleSendAudio}
+                    onDiscard={() => setRecordedAudio(null)}
+                    isSending={isSending}
+                />
+          ) : isRecording ? (
+                <div className="flex items-center gap-2 w-full h-10">
+                     <Avatar className="h-8 w-8">
+                        <AvatarImage src={mockMe.avatarUrl} />
+                        <AvatarFallback>{mockMe.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 text-center font-mono text-red-500">
+                        {formatRecordingTime(recordingTime)}
+                    </div>
+                    <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={handleMicClick}
+                        disabled={isSending}
+                        className="rounded-full text-primary hover:bg-primary/10"
+                        aria-label="Stop recording"
+                    >
+                       <Square className="h-5 w-5 text-red-500 fill-red-500 animate-pulse" />
+                    </Button>
+                </div>
           ) : (
             <>
               {replyingTo && (
@@ -742,7 +863,7 @@ export function CommentSheet({
                                                 if (!e.target.value) return;
                                                 const [hours, minutes] = e.target.value.split(':').map(Number);
                                                 const newDate = scheduledDate ? new Date(scheduledDate) : new Date();
-                                                if (newDate < new Date()) { // if date is in past, set to today
+                                                if (newDate < new Date()) { 
                                                     newDate.setFullYear(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
                                                 }
                                                 newDate.setHours(hours, minutes, 0, 0);
@@ -775,7 +896,7 @@ export function CommentSheet({
                                 className="rounded-full text-primary hover:bg-primary/10"
                                 aria-label={isRecording ? 'Stop recording' : 'Record audio comment'}
                             >
-                                {isRecording ? <Square className="h-5 w-5 text-red-500 fill-red-500 animate-pulse" /> : <Mic className="h-5 w-5" />}
+                               <Mic className="h-5 w-5" />
                             </Button>
                          )}
                     </div>
