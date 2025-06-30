@@ -9,7 +9,7 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { Button } from './ui/button';
-import { Heart, Send, Loader2, Trash2, Pause, Bookmark, Crown, CheckCircle2, Pin, ChevronDown, Smile, Sparkles, Shield, CalendarClock, Volume2 } from 'lucide-react';
+import { Heart, Send, Loader2, Trash2, Pause, Bookmark, Crown, CheckCircle2, Pin, ChevronDown, Smile, Sparkles, Shield, CalendarClock, Volume2, Mic, Square } from 'lucide-react';
 import { mockComments, mockMe, type Comment as CommentType } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
@@ -168,8 +168,8 @@ const CommentItem = ({
                 </p>
             )}
             <div className="flex items-center gap-2">
-              {comment.text && (
-                <div className='break-words'>
+              <div className='break-words flex-1'>
+                {comment.text ? (
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
@@ -188,8 +188,13 @@ const CommentItem = ({
                   >
                     {comment.text.replace(/@(\w+)/g, '[@$1](/profile/$1)')}
                   </ReactMarkdown>
-                </div>
-              )}
+                ) : (
+                  <div className="flex items-center gap-2 text-muted-foreground italic">
+                    <Mic className="h-4 w-4"/> 
+                    <span>Voice comment</span>
+                  </div>
+                )}
+              </div>
               {comment.audioUrl && <TtsPlayer audioUrl={comment.audioUrl} />}
             </div>
         </div>
@@ -228,7 +233,7 @@ const emojiCategories = [
   },
   {
     name: 'Animals & Nature',
-    emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦦', '🦥', '🐁', '🐀', '🐿️', '🌵', '🎄', '🌲', '🌳', '🌴', '🌱', '🌿', '☘️', '🍀', '🎍', '🎋', '🍃', '🍂', '🍁', '🍄', '🌾', '💐', '🌷', '🌹', '🥀', '🌺', '🌸', '🌼', '🌻', '🌞', '🌕', '🌖', '🌗', '🌘', '🌑', '🌒', '🌓', '🌔', '🌚', '🌝', '🌛', '🌜', '⭐', '🌟', '💫', '✨', '☄️', '🪐', '🔥', '💧', '🌊'],
+    emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍', '🐈', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦦', '🦥', '🐁', '🐀', '🐿️', '🌵', '🎄', '🌲', '🌳', '🌴', '🌱', '🌿', '☘️', '🍀', '🎍', '🎋', '🍃', '🍂', '🍁', '🍄', '🌾', '💐', '🌷', '🌹', '🥀', '🌺', '🌸', '🌼', '🌻', '🌞', '🌕', '🌖', '🌗', '🌘', '🌑', '🌒', '🌓', '🌔', '🌚', '🌝', '🌛', '🌜', '⭐', '🌟', '💫', '✨', '☄️', '🪐', '🔥', '💧', '🌊'],
   },
   {
     name: 'Food & Drink',
@@ -263,6 +268,11 @@ export function CommentSheet({
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
   const [fullyExpandedThreads, setFullyExpandedThreads] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState('newest');
+
+  // Audio recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // Moderation state
   const [isModMode, setIsModMode] = useState(false);
@@ -357,52 +367,54 @@ export function CommentSheet({
     });
   };
 
-  const handleSend = async ({ text }: { text?: string; audioUrl?: string }) => {
-    const contentToScan = text || '';
-    if (!contentToScan) {
-      return;
-    }
-
+  const handleSend = async ({ text, audioDataUri }: { text?: string; audioDataUri?: string }) => {
     setIsSending(true);
-
     try {
-      const [scanResult, ttsResult] = await Promise.all([
-        scanCommentAction(contentToScan),
-        generateTtsAction(contentToScan),
-      ]);
-
-      if (!scanResult.isSafe) {
-        toast({
-          variant: 'destructive',
-          title: 'Comment Blocked',
-          description: scanResult.reason || 'This comment violates our community guidelines.',
-        });
-        return;
-      }
-
-      const newComment: CommentType = {
+      let newComment: CommentType | null = null;
+      const baseComment = {
         id: `comment-${Date.now()}`,
         user: mockMe,
         createdAt: new Date(),
         likes: 0,
-        text: contentToScan,
-        audioUrl: ttsResult.audioDataUri,
         ...(replyingTo && {
           replyTo: replyingTo.user,
-          parentId: replyingTo.parentId || replyingTo.id, // Reply to parent thread
+          parentId: replyingTo.parentId || replyingTo.id,
         }),
       };
       
-      setComments(prev => [newComment, ...prev]);
-      
-      if (replyingTo) {
-          setExpandedThreads(prev => new Set(prev).add(replyingTo.parentId || replyingTo.id));
+      if (text) {
+        const [scanResult, ttsResult] = await Promise.all([
+          scanCommentAction(text),
+          generateTtsAction(text),
+        ]);
+
+        if (!scanResult.isSafe) {
+          toast({
+            variant: 'destructive',
+            title: 'Comment Blocked',
+            description: scanResult.reason || 'This comment violates our community guidelines.',
+          });
+          return;
+        }
+
+        newComment = { ...baseComment, text: text, audioUrl: ttsResult.audioDataUri };
+        setCommentText('');
+
+      } else if (audioDataUri) {
+        // Here you might want to add audio content scanning in the future
+        newComment = { ...baseComment, audioUrl: audioDataUri };
       }
-      
-      setCommentText('');
+
+      if (newComment) {
+        setComments(prev => [newComment!, ...prev]);
+        if (replyingTo) {
+          setExpandedThreads(prev => new Set(prev).add(replyingTo.parentId || replyingTo.id));
+        }
+      }
       setReplyingTo(null);
+
     } catch (error) {
-       toast({
+      toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Failed to send comment. Please try again.',
@@ -417,6 +429,41 @@ export function CommentSheet({
       if (!commentText.trim()) return;
       handleSend({ text: commentText });
   }
+
+  const handleMicClick = async () => {
+    if (isRecording) {
+      mediaRecorderRef.current?.stop();
+      setIsRecording(false);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        audioChunksRef.current = [];
+
+        mediaRecorderRef.current.ondataavailable = (event) => {
+          if (event.data.size > 0) audioChunksRef.current.push(event.data);
+        };
+
+        mediaRecorderRef.current.onstop = () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64String = reader.result as string;
+            handleSend({ audioDataUri: base64String });
+          };
+          reader.readAsDataURL(audioBlob);
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorderRef.current.start();
+        setIsRecording(true);
+        toast({ title: "Recording started...", description: "Tap the square to stop and send." });
+      } catch (error) {
+        console.error("Mic error:", error);
+        toast({ variant: 'destructive', title: "Microphone access denied", description: "Please enable microphone permissions in your browser settings." });
+      }
+    }
+  };
   
   const handleScheduleComment = async () => {
     if (!commentText.trim() || !scheduledDate) return;
@@ -447,7 +494,6 @@ export function CommentSheet({
       setIsSending(false);
     }
   };
-
 
   const toggleModMode = () => {
     setIsModMode(prev => {
@@ -627,7 +673,7 @@ export function CommentSheet({
                             className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-ring pr-10" 
                             value={commentText}
                             onChange={(e) => setCommentText(e.target.value)}
-                            disabled={isSending}
+                            disabled={isSending || isRecording}
                             aria-label="Add a text comment"
                         />
                          <Popover>
@@ -709,9 +755,23 @@ export function CommentSheet({
                                 </PopoverContent>
                             </Popover>
                         )}
-                        <Button type="submit" size="icon" variant="ghost" className="bg-transparent rounded-full" disabled={isSending || !commentText.trim()} aria-label="Send comment">
-                            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 text-primary" />}
-                        </Button>
+                         {commentText.trim().length > 0 ? (
+                            <Button type="submit" size="icon" variant="ghost" className="bg-transparent rounded-full" disabled={isSending} aria-label="Send comment">
+                                {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 text-primary" />}
+                            </Button>
+                         ) : (
+                            <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                onClick={handleMicClick}
+                                disabled={isSending}
+                                className="rounded-full text-primary hover:bg-primary/10"
+                                aria-label={isRecording ? 'Stop recording' : 'Record audio comment'}
+                            >
+                                {isRecording ? <Square className="h-5 w-5 text-red-500 fill-red-500 animate-pulse" /> : <Mic className="h-5 w-5" />}
+                            </Button>
+                         )}
                     </div>
                 </form>
             </>
