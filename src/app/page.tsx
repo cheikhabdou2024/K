@@ -12,7 +12,7 @@ import { VideoCard } from '@/components/video-card';
 import type { FeedItem } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
-import { getRecommendedFeedAction } from './actions';
+import { mockFeedItems } from '@/lib/mock-data';
 
 
 const LoadingScreen = () => (
@@ -30,20 +30,14 @@ export default function Home() {
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
-    const fetchFeed = async () => {
-      setIsLoading(true);
-      const recommendedItems = await getRecommendedFeedAction();
-      setFeedItems(recommendedItems);
-      setIsLoading(false);
-    };
-
-    fetchFeed();
+    setIsLoading(true);
+    setFeedItems(mockFeedItems);
+    setIsLoading(false);
   }, []);
 
+  // 3D Flip effect: more elastic, effortless, and powerful
   const onScroll = React.useCallback((api: CarouselApi) => {
-    if (!api) {
-      return;
-    }
+    if (!api) return;
     const engine = api.internalEngine();
     const scrollProgress = api.scrollProgress();
     const slideNodes = api.slideNodes();
@@ -66,11 +60,18 @@ export default function Home() {
         });
       }
 
-      const rotateY = diffToTarget * -20;
-      const translateX = diffToTarget * 20;
+      // Elastic, effortless 3D flip: more pronounced and smooth
+      const rotateY = diffToTarget * -60; // was -20, now -60 for more power
+      const translateX = diffToTarget * 40; // was 20, now 40 for more movement
+      const scale = 1 - Math.abs(diffToTarget) * 0.15; // subtle scale for depth
+      const opacity = Math.max(0.2, 1 - Math.abs(diffToTarget) * 0.7); // fade out side slides
       const slideNode = slideNodes[index];
       if (slideNode) {
-        slideNode.style.transform = `translateX(${translateX}%) rotateY(${rotateY}deg)`;
+        slideNode.style.transition = 'transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1)';
+        slideNode.style.transform = `translateX(${translateX}%) rotateY(${rotateY}deg) scale(${scale})`;
+        slideNode.style.opacity = `${opacity}`;
+        slideNode.style.zIndex = `${100 - Math.abs(diffToTarget) * 10}`;
+        slideNode.style.boxShadow = Math.abs(diffToTarget) < 0.01 ? '0 8px 32px 0 rgba(160,32,240,0.25)' : 'none';
       }
     });
   }, []);
@@ -138,7 +139,7 @@ export default function Home() {
             <CarouselItem
               key={item.id}
               className={cn(
-                'p-0 backface-hidden',
+                'p-0 backface-hidden carousel-slide-3d',
                 'origin-center'
               )}
             >

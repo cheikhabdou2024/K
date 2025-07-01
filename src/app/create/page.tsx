@@ -113,7 +113,7 @@ const RecordTab = () => {
 
   const resizeImage = (imageDataURL: string, maxWidth: number, maxHeight: number): Promise<string> => {
     return new Promise((resolve) => {
-      const img = new Image();
+      const img = document.createElement('img');
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let width = img.width;
@@ -464,441 +464,284 @@ const RecordTab = () => {
       />
     </div>
   );
-};
+}
 
-const UploadTab = () => {
-  const [mediaFiles, setMediaFiles] = useState<{
-    src: string;
-    type: string;
-    date?: string;
-    duration?: number;
-    size?: string;
-  }[]>([]);
-  const [itemsToShow, setItemsToShow] = useState(12); // Initial number of items to show
-  const itemsPerPage = 12; // Number of items to load per page
+
+
+function UploadTab() {
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [coverTime, setCoverTime] = useState<number>(0);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [description, setDescription] = useState('');
+  const [music, setMusic] = useState('');
+  const [privacy, setPrivacy] = useState<'public' | 'friends' | 'private'>('public');
+  const [isUploading, setIsUploading] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [filter, setFilter] = useState<'all' | 'photos' | 'videos'>('all');
-  const [isDragging, setIsDragging] = useState(false);
-  const [processingProgress, setProcessingProgress] = useState(0); // New state for processing progress
 
-  const processFiles = async (files: FileList) => {
-    setProcessingProgress(0); // Reset progress at the start of processing
-    const totalFiles = files.length;
-    let processedCount = 0;
-
-    const processedFiles = await Promise.all(Array.from(files).map(async (file) => {
-      let src = URL.createObjectURL(file);
-      let size = `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
-      let duration: number | undefined = undefined;
-
-      if (file.type.startsWith('image/')) {
-        const compressedImage = await compressImage(file);
-        src = compressedImage.src;
-        size = compressedImage.size;
-      } else if (file.type.startsWith('video/')) {
-        duration = await getMediaDuration(src);
-      }
-
-      processedCount++;
-      setProcessingProgress(Math.floor((processedCount / totalFiles) * 100));
-
-      return {
-        src,
-        type: file.type,
-        date: file.lastModifiedDate?.toLocaleDateString(),
-        size,
-        duration,
-      };
-    }));
-
-    setMediaFiles((prevMedia) => [...prevMedia, ...processedFiles]);
-    setProcessingProgress(0); // Reset after completion
-  };
-
-  const compressImage = (file: File): Promise<{ src: string; size: string }> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-
-        // Set a maximum width/height for compression, maintain aspect ratio
-        const maxWidth = 1024;
-        const maxHeight = 1024;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > maxWidth) {
-            height *= maxWidth / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width *= maxHeight / height;
-            height = maxHeight;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob((blob) => {
-          if (blob) {
-            resolve({
-              src: URL.createObjectURL(blob),
-              size: `${(blob.size / (1024 * 1024)).toFixed(2)} MB`,
-            });
-          } else {
-            resolve({ src: img.src, size: `${(file.size / (1024 * 1024)).toFixed(2)} MB` });
-          }
-        }, 'image/jpeg', 0.7); // Compress to JPEG with 70% quality
-      };
-      img.onerror = () => {
-        resolve({ src: img.src, size: `${(file.size / (1024 * 1024)).toFixed(2)} MB` });
-      };
-    });
-  };
-
-  const getMediaDuration = (url: string): Promise<number> => {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.src = url;
-      video.onloadedmetadata = () => {
-        resolve(video.duration);
-      };
-      video.onerror = () => {
-        resolve(0); // Resolve with 0 if there's an error loading metadata
-      };
-    });
-  };
-
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  const handleChoosePhoto = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleScroll = () => {
-    if (scrollContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-      if (scrollTop + clientHeight >= scrollHeight - 50 && itemsToShow < filteredMedia.length) {
-        // Load more items when scrolled near the bottom
-        setItemsToShow((prev) => prev + itemsPerPage);
-      }
+  // Handle video file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('video/')) {
+      setVideoFile(file);
+      setVideoUrl(URL.createObjectURL(file));
+      setCoverUrl(null);
     }
   };
 
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(true);
+  // Generate cover image from video
+  const handleCaptureCover = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    setCoverUrl(canvas.toDataURL('image/jpeg'));
   };
 
-  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-    if (event.dataTransfer.files) {
-      processFiles(event.dataTransfer.files);
+  // Handle cover time slider
+  const handleCoverTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = Number(e.target.value);
+    setCoverTime(time);
+    if (videoRef.current) {
+      videoRef.current.currentTime = time;
     }
   };
 
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll);
-      return () => container.removeEventListener('scroll', handleScroll);
-    }
-  }, [mediaFiles, itemsToShow, filter]); // Re-attach listener if mediaFiles, itemsToShow, or filter change
-
-  const filteredMedia = mediaFiles.filter((media) => {
-    if (filter === 'photos') {
-      return media.type.startsWith('image/');
-    }
-    if (filter === 'videos') {
-      return media.type.startsWith('video/');
-    }
-    return true;
-  });
+  // Simulate upload
+  const handleUpload = () => {
+    setIsUploading(true);
+    setTimeout(() => {
+      setIsUploading(false);
+      alert('Video uploaded! (Démo)');
+    }, 2000);
+  };
 
   return (
-    <div
-      className="w-full h-full bg-gray-700 flex flex-col p-4 relative flex-shrink-0"
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      {isDragging && (
-        <div className="absolute inset-0 bg-blue-500 bg-opacity-50 flex items-center justify-center text-white text-2xl font-bold z-10">
-          Drop files here
+    <div className="w-full h-full flex flex-col items-center justify-center bg-black text-white p-4 overflow-y-auto">
+      {!videoFile ? (
+        <div className="flex flex-col items-center justify-center gap-6 h-full">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="video/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <button
+            className="flex flex-col items-center justify-center border-2 border-dashed border-gray-500 rounded-xl p-8 hover:bg-gray-800 transition cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="h-12 w-12 mb-2 text-primary" />
+            <span className="font-semibold text-lg">Select video to upload</span>
+            <span className="text-gray-400 text-sm mt-2">MP4 or WebM, up to 60s, max 100MB</span>
+          </button>
         </div>
-      )}
-      {processingProgress > 0 && processingProgress < 100 && (
-        <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center text-white z-20">
-          <p className="text-lg font-semibold mb-2">Processing files...</p>
-          <div className="w-3/4 h-4 bg-gray-600 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-500 transition-all duration-100 ease-out"
-              style={{ width: `${processingProgress}%` }}
-            ></div>
+      ) : (
+        <div className="w-full max-w-md mx-auto flex flex-col gap-6">
+          <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
+            <video
+              ref={videoRef}
+              src={videoUrl!}
+              controls
+              className="w-full h-full object-contain bg-black"
+              onLoadedMetadata={() => {
+                if (videoRef.current) videoRef.current.currentTime = coverTime;
+              }}
+              onTimeUpdate={handleCaptureCover}
+            />
+            {coverUrl && (
+              <img
+                src={coverUrl}
+                alt="Cover preview"
+                className="absolute bottom-2 right-2 w-16 h-16 object-cover border-2 border-primary rounded shadow-lg bg-black"
+              />
+            )}
           </div>
-          <p className="mt-2">{processingProgress}%</p>
-        </div>
-      )}
-      <input
-        type="file"
-        accept="image/*,video/*"
-        multiple
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        className="hidden"
-      />
-      <div className="flex-1 flex flex-col">
-          {filteredMedia.length > 0 ? (
-            <div ref={scrollContainerRef} className="grid grid-cols-3 gap-1 overflow-y-auto flex-1">
-              {filteredMedia.slice(0, itemsToShow).map((media, index) => (
-                <div key={index} className="relative w-full h-32 bg-gray-800 flex items-center justify-center overflow-hidden group">
-                  {media.type.startsWith('image/') ? (
-                    <img src={media.src} alt={`Uploaded ${index}`} className="object-cover w-full h-full" />
-                  ) : (
-                    <video src={media.src} controls className="object-cover w-full h-full" />
-                  )}
-                  <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col justify-end p-2 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    {media.date && <p>Date: {media.date}</p>}
-                    {media.size && <p>Size: {media.size}</p>}
-                    {media.duration !== undefined && <p>Duration: {formatDuration(media.duration)}</p>}
-                  </div>
-                </div>
-              ))}
-              {itemsToShow < filteredMedia.length && (
-                <div className="col-span-3 flex justify-center py-4">
-                  <p className="text-white">Loading more...</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-white text-center">
-              <p>No {filter === 'photos' ? 'photos' : filter === 'videos' ? 'videos' : 'media'} selected. Choose from your library to get started!</p>
-            </div>
-          )}
-
-          <div className="flex flex-col items-center p-4 bg-gray-800 rounded-lg mt-4">
-            <Button
-              onClick={handleChoosePhoto}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg w-full mb-4"
+          <div>
+            <label className="block text-sm font-semibold mb-1">Select cover</label>
+            <input
+              type="range"
+              min={0}
+              max={videoRef.current?.duration || 60}
+              step={0.1}
+              value={coverTime}
+              onChange={handleCoverTimeChange}
+              className="w-full accent-primary"
+            />
+            <button
+              className="mt-2 px-3 py-1 bg-primary text-white rounded text-sm font-semibold hover:bg-primary/90"
+              onClick={handleCaptureCover}
+              type="button"
+            >Capture cover</button>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1">Description</label>
+            <textarea
+              className="w-full rounded bg-gray-900 border border-gray-700 p-2 text-white resize-none"
+              rows={2}
+              maxLength={150}
+              placeholder="Describe your video..."
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+            />
+            <div className="text-xs text-gray-400 text-right">{description.length}/150</div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1">Music (optional)</label>
+            <input
+              className="w-full rounded bg-gray-900 border border-gray-700 p-2 text-white"
+              placeholder="Add a sound or music..."
+              value={music}
+              onChange={e => setMusic(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1">Privacy</label>
+            <select
+              className="w-full rounded bg-gray-900 border border-gray-700 p-2 text-white"
+              value={privacy}
+              onChange={e => setPrivacy(e.target.value as any)}
             >
-              <Image className="h-6 w-6 mr-2" />
-              Choose from Photo Library
-            </Button>
-
-            <div className="flex justify-center space-x-2 w-full">
-              <Button
-                variant={filter === 'all' ? 'default' : 'outline'}
-                onClick={() => setFilter('all')}
-                className="text-white flex-1"
-              >
-                All
-              </Button>
-              <Button
-                variant={filter === 'photos' ? 'default' : 'outline'}
-                onClick={() => setFilter('photos')}
-                className="text-white flex-1"
-              >
-                Photos
-              </Button>
-              <Button
-                variant={filter === 'videos' ? 'default' : 'outline'}
-                onClick={() => setFilter('videos')}
-                className="text-white flex-1"
-              >
-                Videos
-              </Button>
-            </div>
+              <option value="public">Public</option>
+              <option value="friends">Friends</option>
+              <option value="private">Private</option>
+            </select>
           </div>
+          <button
+            className="mt-4 w-full py-3 rounded-full bg-primary text-white font-bold text-lg shadow-lg hover:bg-primary/90 disabled:opacity-60"
+            onClick={handleUpload}
+            disabled={isUploading}
+          >
+            {isUploading ? 'Uploading...' : 'Post'}
+          </button>
         </div>
-      </div>
+      )}
     </div>
   );
+}
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      processFiles(event.target.files);
-    }
-  };
+// (Suppression du code dupliqué et des balises orphelines)
 
-  const getMediaDuration = (url: string): Promise<number> => {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.src = url;
-      video.onloadedmetadata = () => {
-        resolve(video.duration);
-      };
-      video.onerror = () => {
-        resolve(0); // Resolve with 0 if there's an error loading metadata
-      };
-    });
-  };
 
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
+// --- LiveTab (TikTok style) ---
 
-  const handleChoosePhoto = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleScroll = () => {
-    if (scrollContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-      if (scrollTop + clientHeight >= scrollHeight - 50 && itemsToShow < filteredMedia.length) {
-        // Load more items when scrolled near the bottom
-        setItemsToShow((prev) => prev + itemsPerPage);
-      }
-    }
-  };
-
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-    if (event.dataTransfer.files) {
-      processFiles(event.dataTransfer.files);
-    }
-  };
-
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll);
-      return () => container.removeEventListener('scroll', handleScroll);
-    }
-  }, [mediaFiles, itemsToShow, filter]); // Re-attach listener if mediaFiles, itemsToShow, or filter change
-
-  const filteredMedia = mediaFiles.filter((media) => {
-    if (filter === 'photos') {
-      return media.type.startsWith('image/');
-    }
-    if (filter === 'videos') {
-      return media.type.startsWith('video/');
-    }
-    return true;
-  });
-
-  return (
-    <div
-      className="w-full h-full bg-gray-700 flex flex-col p-4 relative flex-shrink-0"
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      {isDragging && (
-        <div className="absolute inset-0 bg-blue-500 bg-opacity-50 flex items-center justify-center text-white text-2xl font-bold z-10">
-          Drop files here
-        </div>
-      )}
-      <>
-        <input
-          type="file"
-          accept="image/*,video/*"
-          multiple
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          className="hidden"
-        />
-        <div className="flex-1 flex flex-col">
-          {filteredMedia.length > 0 ? (
-            <div ref={scrollContainerRef} className="grid grid-cols-3 gap-1 overflow-y-auto flex-1">
-              {filteredMedia.slice(0, itemsToShow).map((media, index) => (
-                <div key={index} className="relative w-full h-32 bg-gray-800 flex items-center justify-center overflow-hidden group">
-                  {media.type.startsWith('image/') ? (
-                    <img src={media.src} alt={`Uploaded ${index}`} className="object-cover w-full h-full" />
-                  ) : (
-                    <video src={media.src} controls className="object-cover w-full h-full" />
-                  )}
-                  <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col justify-end p-2 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    {media.date && <p>Date: {media.date}</p>}
-                    {media.size && <p>Size: {media.size}</p>}
-                    {media.duration !== undefined && <p>Duration: {formatDuration(media.duration)}</p>}
-                  </div>
-                </div>
-              ))}
-              {itemsToShow < filteredMedia.length && (
-                <div className="col-span-3 flex justify-center py-4">
-                  <p className="text-white">Loading more...</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-white text-center">
-              <p>No {filter === 'photos' ? 'photos' : filter === 'videos' ? 'videos' : 'media'} selected. Choose from your library to get started!</p>
-            </div>
-          )}
-
-          <div className="flex flex-col items-center p-4 bg-gray-800 rounded-lg mt-4">
-            <Button
-              onClick={handleChoosePhoto}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg w-full mb-4"
-            >
-              <Image className="h-6 w-6 mr-2" />
-              Choose from Photo Library
-            </Button>
-
-            <div className="flex justify-center space-x-2 w-full">
-              <Button
-                variant={filter === 'all' ? 'default' : 'outline'}
-                onClick={() => setFilter('all')}
-                className="text-white flex-1"
-              >
-                All
-              </Button>
-              <Button
-                variant={filter === 'photos' ? 'default' : 'outline'}
-                onClick={() => setFilter('photos')}
-                className="text-white flex-1"
-              >
-                Photos
-              </Button>
-              <Button
-                variant={filter === 'videos' ? 'default' : 'outline'}
-                onClick={() => setFilter('videos')}
-                className="text-white flex-1"
-              >
-                Videos
-              </Button>
-            </div>
-          </div>
-        </div>
-      </>
-    </div>
-  );
-};
 
 const LiveTab = () => {
+  const [title, setTitle] = useState('');
+  const [cover, setCover] = useState<string | null>(null);
+  const [privacy, setPrivacy] = useState<'public' | 'friends' | 'private'>('public');
+  const [isLive, setIsLive] = useState(false);
+  const [isCameraOn, setIsCameraOn] = useState(true);
+  const [isMicOn, setIsMicOn] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle cover image selection
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const url = URL.createObjectURL(file);
+      setCover(url);
+    }
+  };
+
+  // Simulate Go Live
+  const handleGoLive = () => {
+    setIsLive(true);
+    setTimeout(() => {
+      alert('Live started! (Démo)');
+    }, 1000);
+  };
+
   return (
-    <div className="w-full h-full bg-gray-600 flex items-center justify-center">
-      <p className="text-white">Live Tab Content</p>
+    <div className="w-full h-full flex flex-col items-center justify-center bg-black text-white p-4 overflow-y-auto">
+      {!isLive ? (
+        <div className="w-full max-w-md mx-auto flex flex-col gap-6">
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative w-32 h-44 rounded-xl overflow-hidden bg-gray-800 flex items-center justify-center cursor-pointer border-2 border-dashed border-gray-600"
+                 onClick={() => fileInputRef.current?.click()}>
+              {cover ? (
+                <img src={cover} alt="Cover" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-gray-400 text-sm">Add cover</span>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCoverChange}
+              />
+            </div>
+            <span className="text-xs text-gray-400">Tap to upload a cover</span>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1">Live title</label>
+            <input
+              className="w-full rounded bg-gray-900 border border-gray-700 p-2 text-white"
+              placeholder="What's your live about?"
+              maxLength={50}
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+            />
+            <div className="text-xs text-gray-400 text-right">{title.length}/50</div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1">Privacy</label>
+            <select
+              className="w-full rounded bg-gray-900 border border-gray-700 p-2 text-white"
+              value={privacy}
+              onChange={e => setPrivacy(e.target.value as any)}
+            >
+              <option value="public">Public</option>
+              <option value="friends">Friends</option>
+              <option value="private">Private</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-4 justify-between">
+            <button
+              className={`flex-1 py-2 rounded-full font-semibold text-sm ${isCameraOn ? 'bg-primary text-white' : 'bg-gray-800 text-gray-400 border border-gray-600'}`}
+              onClick={() => setIsCameraOn(v => !v)}
+              type="button"
+            >
+              <Camera className="inline-block mr-2 h-5 w-5" /> {isCameraOn ? 'Camera On' : 'Camera Off'}
+            </button>
+            <button
+              className={`flex-1 py-2 rounded-full font-semibold text-sm ${isMicOn ? 'bg-primary text-white' : 'bg-gray-800 text-gray-400 border border-gray-600'}`}
+              onClick={() => setIsMicOn(v => !v)}
+              type="button"
+            >
+              <Radio className="inline-block mr-2 h-5 w-5" /> {isMicOn ? 'Mic On' : 'Mic Off'}
+            </button>
+          </div>
+          <button
+            className="mt-4 w-full py-3 rounded-full bg-primary text-white font-bold text-lg shadow-lg hover:bg-primary/90"
+            onClick={handleGoLive}
+            type="button"
+          >Go Live</button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center h-full gap-6">
+          <div className="w-32 h-44 rounded-xl bg-gray-800 flex items-center justify-center">
+            {cover ? (
+              <img src={cover} alt="Cover" className="w-full h-full object-cover rounded-xl" />
+            ) : (
+              <Camera className="h-12 w-12 text-gray-500" />
+            )}
+          </div>
+          <h2 className="text-xl font-bold">You are live!</h2>
+          <p className="text-gray-400">Your audience can now join your live stream.</p>
+          <button
+            className="mt-2 px-6 py-2 rounded-full bg-red-600 text-white font-bold text-lg shadow-lg hover:bg-red-700"
+            onClick={() => setIsLive(false)}
+            type="button"
+          >End Live</button>
+        </div>
+      )}
     </div>
   );
 };
@@ -921,15 +764,19 @@ const CreatePage = () => {
         </Button>
       </header>
 
+
       <main className="flex-1 flex flex-col items-center justify-center pt-16">
-        <div className="w-full max-w-md bg-gray-900 rounded-lg overflow-hidden relative shadow-lg" style={{ paddingTop: '177.77%' }}>
-          <div className="absolute inset-0">
-            <div className="h-full w-full flex transition-transform duration-300 ease-in-out" style={{ transform: `translateX(-${translateXValue}%)` }}>
-              <RecordTab />
-              <UploadTab />
-              <LiveTab />
-            </div>
-          </div>
+        <div className="w-full max-w-md bg-gray-900 rounded-lg overflow-hidden relative shadow-lg flex min-h-[600px]">
+          {/* Only render the active tab for correct layout and performance */}
+          {activeTab === 'record' && (
+            <div className="w-full h-full absolute inset-0"><RecordTab /></div>
+          )}
+          {activeTab === 'upload' && (
+            <div className="w-full h-full absolute inset-0"><UploadTab /></div>
+          )}
+          {activeTab === 'live' && (
+            <div className="w-full h-full absolute inset-0"><LiveTab /></div>
+          )}
         </div>
       </main>
 
