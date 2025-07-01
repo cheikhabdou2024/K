@@ -61,17 +61,17 @@ export default function Home() {
       }
 
       // Elastic, effortless 3D flip: more pronounced and smooth
-      const rotateY = diffToTarget * -60; // was -20, now -60 for more power
-      const translateX = diffToTarget * 40; // was 20, now 40 for more movement
-      const scale = 1 - Math.abs(diffToTarget) * 0.15; // subtle scale for depth
-      const opacity = Math.max(0.2, 1 - Math.abs(diffToTarget) * 0.7); // fade out side slides
+      const rotateY = diffToTarget * -75; // Increased from -60 for more pronounced rotation
+      const translateX = diffToTarget * 50; // Increased from 40 for more movement
+      const scale = 1 - Math.abs(diffToTarget) * 0.2; // Increased from 0.15 for more depth
+      const opacity = Math.max(0.1, 1 - Math.abs(diffToTarget) * 0.8); // Increased from 0.7 for more fade
       const slideNode = slideNodes[index];
       if (slideNode) {
-        slideNode.style.transition = 'transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1)';
+        slideNode.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1)'; // Adjusted timing and bezier for more elasticity
         slideNode.style.transform = `translateX(${translateX}%) rotateY(${rotateY}deg) scale(${scale})`;
         slideNode.style.opacity = `${opacity}`;
-        slideNode.style.zIndex = `${100 - Math.abs(diffToTarget) * 10}`;
-        slideNode.style.boxShadow = Math.abs(diffToTarget) < 0.01 ? '0 8px 32px 0 rgba(160,32,240,0.25)' : 'none';
+        slideNode.style.zIndex = `${100 - Math.abs(diffToTarget) * 15}`; // Adjusted for smoother layering
+        slideNode.style.boxShadow = Math.abs(diffToTarget) < 0.01 ? '0 12px 48px 0 rgba(160,32,240,0.35)' : 'none'; // More prominent shadow
       }
     });
   }, []);
