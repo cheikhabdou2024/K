@@ -393,7 +393,10 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
     const end = { x: e.clientX, y: e.clientY };
     const moveDistance = getDistance(start, end);
 
-    if (moveDistance < 10) {
+    const deltaY = start.y - end.y;
+    const deltaX = Math.abs(start.x - end.x);
+
+    if (moveDistance < 10) { // Tap gesture
       if (tapTimeout.current) {
         clearTimeout(tapTimeout.current);
         tapTimeout.current = null;
@@ -404,6 +407,8 @@ export function VideoCard({ item, isActive }: VideoCardProps) {
           tapTimeout.current = null;
         }, 300);
       }
+    } else if (deltaY > 50 && deltaY > deltaX) { // Swipe up gesture
+        setIsCommentSheetOpen(true);
     }
     
     pointerStartRef.current = null;

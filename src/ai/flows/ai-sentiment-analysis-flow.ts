@@ -50,7 +50,12 @@ const sentimentAnalysisFlow = ai.defineFlow(
     const { output } = await sentimentAnalysisPrompt(input);
     if (!output) {
       // Fallback in case the model fails to produce structured output
-      return { sentiment: 'Neutral', score: 0, emotions: [] };
+      const fallbackOutput: SentimentAnalysisOutput = {
+        sentiment: 'Neutral',
+        score: 0,
+        emotions: [],
+      };
+      return fallbackOutput;
     }
     return output;
   }

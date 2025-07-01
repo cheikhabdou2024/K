@@ -1,15 +1,10 @@
-
 'use client';
 
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from '@/components/ui/drawer';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { Button } from './ui/button';
-import { Heart, Send, Loader2, Trash2, Pause, Bookmark, Crown, CheckCircle2, Pin, ChevronDown, Smile, Sparkles, Shield, CalendarClock, Volume2, Mic, Square, Play, XIcon } from 'lucide-react';
+import { Heart, Send, Loader2, Trash2, Pause, Bookmark, Crown, CheckCircle2, Pin, ChevronDown, Smile, Sparkles, CalendarClock, Volume2, Mic, Square, Play, XIcon } from 'lucide-react';
 import { mockComments, mockMe, type Comment as CommentType } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
@@ -22,10 +17,10 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { formatDistanceToNow } from 'date-fns';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Checkbox } from './ui/checkbox';
 import { Calendar } from './ui/calendar';
 
+
+import { useDrag } from '@use-gesture/react';
 
 const StaticAudioVisualizer = ({ barCount = 30 }: { barCount?: number }) => {
   const bars = useMemo(() => 
@@ -149,9 +144,6 @@ const CommentItem = ({
   isPinned,
   onPinComment,
   isViewingUserCreator,
-  isModMode,
-  isSelected,
-  onSelectComment,
 }: {
   comment: CommentType;
   onReply: (comment: CommentType) => void;
@@ -159,9 +151,6 @@ const CommentItem = ({
   isPinned: boolean;
   onPinComment: (id: string) => void;
   isViewingUserCreator: boolean;
-  isModMode: boolean;
-  isSelected: boolean;
-  onSelectComment: (id: string) => void;
 }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(comment.likes);
@@ -189,15 +178,6 @@ const CommentItem = ({
 
   return (
     <div className={cn("flex items-start gap-2 pr-4", { "ml-8": !!comment.parentId })} role="article" aria-labelledby={`comment-user-${comment.id}`}>
-       {isModMode && (
-        <div className="pt-2">
-            <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => onSelectComment(comment.id)}
-                aria-label={`Select comment by ${comment.user.username}`}
-            />
-        </div>
-      )}
       <Avatar className="h-8 w-8">
         <AvatarImage src={comment.user.avatarUrl} />
         <AvatarFallback>{comment.user.name.charAt(0)}</AvatarFallback>
@@ -240,7 +220,7 @@ const CommentItem = ({
                       a: ({node, ...props}) => (
                         <a className="text-primary font-semibold hover:underline cursor-pointer" {...props} />
                       ),
-                      code: ({node, inline, className, children, ...props}) => {
+                      code: ({node, inline, className, children, ...props}: {node?: any; inline?: boolean; className?: string; children?: React.ReactNode}) => {
                         if (inline) {
                           return <code className="bg-primary/10 text-primary px-1 py-0.5 rounded-sm font-mono text-sm" {...props}>{children}</code>
                         }
@@ -258,8 +238,7 @@ const CommentItem = ({
                   </div>
                 )}
               </div>
-              {comment.text && comment.audioUrl && <TtsPlayer audioUrl={comment.audioUrl} />}
-              {!comment.text && comment.audioUrl && <TtsPlayer audioUrl={comment.audioUrl} />}
+              {comment.audioUrl && <TtsPlayer audioUrl={comment.audioUrl} />}
             </div>
         </div>
         <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground px-2">
@@ -331,7 +310,6 @@ export function CommentSheet({
   const [pinnedCommentId, setPinnedCommentId] = useState<string | null>(null);
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
   const [fullyExpandedThreads, setFullyExpandedThreads] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState('newest');
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -341,10 +319,23 @@ export function CommentSheet({
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout>();
 
+  const sheetContentRef = useRef<HTMLDivElement>(null);
+  const [y, setY] = useState(0);
 
-  // Moderation state
-  const [isModMode, setIsModMode] = useState(false);
-  const [selectedComments, setSelectedComments] = useState<Set<string>>(new Set());
+  const bind = useDrag(
+    ({ down, movement: [, my], velocity: [, vy], direction: [, dy] }) => {
+      if (down) {
+        setY(my > 0 ? my : 0);
+      } else {
+        if (my > window.innerHeight * 0.2 || (vy > 0.5 && dy > 0)) {
+          onOpenChange?.(false);
+        } 
+        setY(0);
+      }
+    },
+    { axis: 'y', from: () => [0, y], bounds: { top: 0 } }
+  );
+
   const isViewingUserCreator = videoOwnerId === mockMe.id;
   
   // Scheduling state
@@ -366,22 +357,7 @@ export function CommentSheet({
         }
     });
 
-    const sortedThreads = [...threads].sort((a, b) => {
-      switch (sortBy) {
-        case 'top':
-          return b.likes - a.likes;
-        case 'oldest':
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case 'most-replied': {
-            const repliesA = repliesMap.get(a.id)?.length || 0;
-            const repliesB = repliesMap.get(b.id)?.length || 0;
-            return repliesB - repliesA;
-        }
-        case 'newest':
-        default:
-          return new Date(b.createdAt).getTime() - new Date(b.createdAt).getTime();
-      }
-    });
+    const sortedThreads = [...threads].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     const populatedThreads = sortedThreads.map(thread => ({
         ...thread,
@@ -397,7 +373,7 @@ export function CommentSheet({
         return [pinnedThread, ...otherThreads];
     }
     return populatedThreads;
-  }, [comments, pinnedCommentId, sortBy]);
+  }, [comments, pinnedCommentId]);
 
   const handlePinComment = (commentId: string) => {
     if (!commentThreads.some(thread => thread.id === commentId && !thread.parentId)) {
@@ -582,44 +558,6 @@ export function CommentSheet({
     }
   };
 
-  const toggleModMode = () => {
-    setIsModMode(prev => {
-        if (prev) {
-            setSelectedComments(new Set());
-        }
-        return !prev;
-    });
-  };
-
-  const handleSelectComment = (commentId: string) => {
-    setSelectedComments(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(commentId)) {
-            newSet.delete(commentId);
-        } else {
-            newSet.add(commentId);
-        }
-        return newSet;
-    });
-  };
-
-  const handleBulkDelete = () => {
-    const allIdsToDelete = new Set(selectedComments);
-    comments.forEach(comment => {
-        if (comment.parentId && selectedComments.has(comment.parentId)) {
-            allIdsToDelete.add(comment.id);
-        }
-    });
-
-    setComments(prev => prev.filter(c => !allIdsToDelete.has(c.id)));
-    toast({
-        title: `${selectedComments.size} comment thread(s) deleted`,
-        description: `A total of ${allIdsToDelete.size} comments were removed.`,
-    });
-    setSelectedComments(new Set());
-    setIsModMode(false);
-  };
-
   const formatRecordingTime = (seconds: number) => {
       const mins = Math.floor(seconds / 60);
       const secs = seconds % 60;
@@ -628,38 +566,36 @@ export function CommentSheet({
 
 
   return (
-    <Drawer shouldScaleBackground={false} open={open} onOpenChange={onOpenChange}>
-      <DrawerTrigger asChild>{children}</DrawerTrigger>
-      <DrawerContent
-        className="h-[60%] flex flex-col z-[70] bg-background"
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetTrigger asChild onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>{children}</SheetTrigger>
+      <SheetContent
+        ref={sheetContentRef}
+        side="bottom"
+        className="h-[60%] flex flex-col z-[70] bg-background p-0"
+        style={{ transform: `translateY(${y}px)` }}
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
       >
-        <DrawerHeader className="p-4 pb-2">
-            <div className="flex justify-between items-center gap-2">
-                 {isViewingUserCreator ? (
-                    <Button variant={isModMode ? "secondary" : "outline"} size="sm" onClick={toggleModMode} className="w-[120px]">
-                        {isModMode ? 'Cancel' : <><Shield className="h-4 w-4 mr-2" /><span>Moderate</span></>}
+                <div {...bind()} className="p-4 pb-2 text-center relative cursor-grab active:cursor-grabbing">
+            <div className="w-10 h-1.5 bg-muted-foreground/20 rounded-full mx-auto mb-2" />
+            <SheetTitle>{comments.length.toLocaleString()} Comments</SheetTitle>
+            <div className="absolute right-2 top-2">
+                <SheetClose asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                        <XIcon className="h-4 w-4" />
                     </Button>
-                ) : <div className="w-[120px]" /> /* Spacer */}
-                <DrawerTitle className="text-center flex-1">{comments.length.toLocaleString()} Comments</DrawerTitle>
-                <div className="w-[140px] flex justify-end">
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger className="w-[140px] h-9 text-xs" aria-label="Sort comments by">
-                          <SelectValue placeholder="Sort by..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                          <SelectItem value="newest">Newest</SelectItem>
-                          <SelectItem value="top">Top</SelectItem>
-                          <SelectItem value="most-replied">Most Replied</SelectItem>
-                          <SelectItem value="oldest">Oldest</SelectItem>
-                      </SelectContent>
-                  </Select>
-                </div>
+                </SheetClose>
             </div>
-        </DrawerHeader>
+        </div>
+        <Tabs defaultValue="all" className="w-full px-4">
+            <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="following">Following</TabsTrigger>
+                <TabsTrigger value="new">New</TabsTrigger>
+            </TabsList>
+        </Tabs>
         <ScrollArea
           className="flex-1 my-2"
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
         >
             <div className="space-y-4 p-4">
                 {commentThreads.map((thread) => {
@@ -681,9 +617,6 @@ export function CommentSheet({
                                 isPinned={thread.id === pinnedCommentId}
                                 onPinComment={handlePinComment}
                                 isViewingUserCreator={isViewingUserCreator}
-                                isModMode={isModMode}
-                                isSelected={selectedComments.has(thread.id)}
-                                onSelectComment={handleSelectComment}
                             />
                             
                             {isExpanded && thread.replies && thread.replies.length > 0 && (
@@ -697,9 +630,6 @@ export function CommentSheet({
                                             isPinned={false}
                                             onPinComment={handlePinComment}
                                             isViewingUserCreator={isViewingUserCreator}
-                                            isModMode={isModMode}
-                                            isSelected={selectedComments.has(reply.id)}
-                                            onSelectComment={handleSelectComment}
                                         />
                                     ))}
                                 </div>
@@ -732,26 +662,7 @@ export function CommentSheet({
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          {isModMode ? (
-            selectedComments.size > 0 ? (
-                 <div className="flex items-center justify-between h-10">
-                    <div className="text-sm font-medium">
-                        {selectedComments.size} selected
-                    </div>
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setSelectedComments(new Set())}>Deselect All</Button>
-                        <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                        </Button>
-                    </div>
-                </div>
-            ) : (
-                <div className="text-center text-sm text-muted-foreground flex items-center justify-center h-10">
-                    Select comments to moderate.
-                </div>
-            )
-          ) : recordedAudio ? (
+          {recordedAudio ? (
                 <AudioPreview 
                     audioUrl={recordedAudio.url} 
                     onSend={handleSendAudio}
@@ -904,7 +815,7 @@ export function CommentSheet({
             </>
           )}
         </div>
-      </DrawerContent>
-    </Drawer>
+      </SheetContent>
+    </Sheet>
   );
 }

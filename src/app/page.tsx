@@ -41,6 +41,9 @@ export default function Home() {
   }, []);
 
   const onScroll = React.useCallback((api: CarouselApi) => {
+    if (!api) {
+      return;
+    }
     const engine = api.internalEngine();
     const scrollProgress = api.scrollProgress();
     const slideNodes = api.slideNodes();
@@ -63,8 +66,8 @@ export default function Home() {
         });
       }
 
-      const rotateY = diffToTarget * -90;
-      const translateX = diffToTarget * 100;
+      const rotateY = diffToTarget * -20;
+      const translateX = diffToTarget * 20;
       const slideNode = slideNodes[index];
       if (slideNode) {
         slideNode.style.transform = `translateX(${translateX}%) rotateY(${rotateY}deg)`;

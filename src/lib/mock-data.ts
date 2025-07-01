@@ -1,5 +1,5 @@
 
-import type { Timestamp } from "firebase/firestore";
+
 
 export interface User {
   id: string;
@@ -50,7 +50,7 @@ export interface FirestorePost {
   shares: number;
   views: number;
   product?: Product;
-  createdAt: Timestamp;
+  createdAt: { seconds: number; nanoseconds: number; };
 }
 
 // Represents a post with its user data populated for use in the client.
@@ -58,7 +58,7 @@ export interface FeedItem extends Omit<FirestorePost, 'userId' | 'createdAt'> {
   user: User;
   isLiked?: boolean;
   product?: Product;
-  createdAt: { seconds: number; nanoseconds: number; }; // Replicate Timestamp structure for client
+  createdAt?: { seconds: number; nanoseconds: number; }; // Replicate Timestamp structure for client
 }
 
 
@@ -79,6 +79,7 @@ export interface Story {
   id: string;
   user: User;
   imageUrl: string;
+  comments: Comment[];
 }
 
 export interface Chat {
@@ -410,12 +411,12 @@ export const mockSoundLibrary: Sound[] = [
 ];
 
 export const mockComments: Comment[] = [
-    { id: 'comment-1', user: users[2], text: "Wow, this looks **amazing**!", createdAt: new Date("2024-07-22T10:00:00Z"), likes: 125 },
-    { id: 'reply-1-1', user: users[0], text: "I agree! The colors are stunning.", createdAt: new Date("2024-07-22T10:02:00Z"), likes: 10, parentId: 'comment-1', replyTo: users[2] },
-    { id: 'reply-1-2', user: users[3], text: "Where was this taken?", createdAt: new Date("2024-07-22T10:05:00Z"), likes: 25, parentId: 'comment-1', replyTo: users[2] },
-    { id: 'reply-1-3', user: users[1], text: "Seriously, need the location ASAP!", createdAt: new Date("2024-07-22T10:08:00Z"), likes: 18, parentId: 'comment-1', replyTo: users[3] },
-    { id: 'reply-1-4', user: users[2], text: "It's from my trip to the Amalfi Coast! Highly recommend.", createdAt: new Date("2024-07-22T10:15:00Z"), likes: 50, parentId: 'comment-1', replyTo: users[3] },
-    { id: 'comment-2', user: users[3], text: "Great content, _keep it up_!", createdAt: new Date("2024-07-22T11:00:00Z"), likes: 88, isFirstTimeCommenter: true },
+    { id: 'comment-1', user: users[2], text: "Wow, this looks **amazing**!", createdAt: new Date("2024-07-22T10:00:00Z"), likes: 125, audioUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
+    { id: 'reply-1-1', user: users[0], text: "I agree! The colors are stunning.", createdAt: new Date("2024-07-22T10:02:00Z"), likes: 10, parentId: 'comment-1', replyTo: users[2], audioUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
+    { id: 'reply-1-2', user: users[3], text: "Where was this taken?", createdAt: new Date("2024-07-22T10:05:00Z"), likes: 25, parentId: 'comment-1', replyTo: users[2], audioUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
+    { id: 'reply-1-3', user: users[1], text: "Seriously, need the location ASAP!", createdAt: new Date("2024-07-22T10:08:00Z"), likes: 18, parentId: 'comment-1', replyTo: users[3], audioUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
+    { id: 'reply-1-4', user: users[2], text: "It's from my trip to the Amalfi Coast! Highly recommend.", createdAt: new Date("2024-07-22T10:15:00Z"), likes: 50, parentId: 'comment-1', replyTo: users[3], audioUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
+    { id: 'comment-2', user: users[3], text: "Great content, _keep it up_!", createdAt: new Date("2024-07-22T11:00:00Z"), likes: 88, isFirstTimeCommenter: true, audioUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
     {
         id: 'comment-audio',
         user: users[1],
@@ -426,17 +427,18 @@ export const mockComments: Comment[] = [
         createdAt: new Date("2024-07-22T12:00:00Z"),
         likes: 42
     },
-    { id: 'comment-3', user: users[1], text: "Love this! So creative.", createdAt: new Date("2024-07-22T11:30:00Z"), likes: 231 },
-    { id: 'comment-4', user: users[0], text: "This is my ~~least~~ favorite so far!", createdAt: new Date("2024-07-22T11:45:00Z"), likes: 45, replyTo: users[1], parentId: 'comment-3' },
-    { id: 'comment-5', user: users[2], text: "For anyone wondering, here is the code: `console.log('hello');`", createdAt: new Date("2024-07-22T11:50:00Z"), likes: 15 },
-    { id: 'comment-6', user: users[0], text: "A multi-line example:\n```javascript\nfunction greet() {\n  return 'Hello, World!';\n}\n```", createdAt: new Date("2024-07-22T11:55:00Z"), likes: 22 },
-    { id: 'comment-7', user: users[3], text: "Hey @janedoe, check this out! Awesome work.", createdAt: new Date("2024-07-22T12:10:00Z"), likes: 5 },
+    { id: 'comment-3', user: users[1], text: "Love this! So creative.", createdAt: new Date("2024-07-22T11:30:00Z"), likes: 231, audioUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
+    { id: 'comment-4', user: users[0], text: "This is my ~~least~~ favorite so far!", createdAt: new Date("2024-07-22T11:45:00Z"), likes: 45, replyTo: users[1], parentId: 'comment-3', audioUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
+    { id: 'comment-5', user: users[2], text: "For anyone wondering, here is the code: `console.log('hello');`", createdAt: new Date("2024-07-22T11:50:00Z"), likes: 15, audioUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
+    { id: 'comment-6', user: users[0], text: "A multi-line example:\n```javascript\nfunction greet() {\n  return 'Hello, World!';\n}\n```", createdAt: new Date("2024-07-22T11:55:00Z"), likes: 22, audioUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
+    { id: 'comment-7', user: users[3], text: "Hey @janedoe, check this out! Awesome work.", createdAt: new Date("2024-07-22T12:10:00Z"), likes: 5, audioUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' }
 ];
 
 export const mockStories: Story[] = users.slice(1).map((user, index) => ({
     id: `story-${index + 1}`,
     user,
-    imageUrl: 'https://placehold.co/200x300.png'
+    imageUrl: 'https://placehold.co/200x300.png',
+    comments: mockComments.slice(index, index + 5),
 }));
 
 export const mockChats: Chat[] = [

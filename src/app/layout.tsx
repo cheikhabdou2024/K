@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   description: 'The next-generation short-form video platform.',
 };
 
+import { CreateProvider } from '@/contexts/create-context';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -23,9 +25,11 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn('font-body antialiased', 'bg-background text-foreground', 'h-[100dvh] flex flex-col')}>
+        <CreateProvider>
           <main className="flex-1 min-h-0">{children}</main>
           <BottomNav />
           <Toaster />
+        </CreateProvider>
       </body>
     </html>
   );

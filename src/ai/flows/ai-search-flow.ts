@@ -36,6 +36,7 @@ const FeedItemSchema = z.object({
     likes: z.number(),
     comments: z.number(),
     shares: z.number(),
+    views: z.number(),
     isLiked: z.boolean().optional(),
     createdAt: z.any(),
 });

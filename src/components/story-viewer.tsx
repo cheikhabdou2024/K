@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -6,8 +5,10 @@ import { type Story } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { X, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Pause, Play, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
+import { useDrag } from '@use-gesture/react';
+import { CommentSheet } from './comment-sheet';
 
 interface StoryViewerProps {
   stories: Story[];
@@ -24,8 +25,15 @@ export function StoryViewer({ stories, initialStoryIndex, onClose }: StoryViewer
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const requestRef = useRef<number>();
   const startTimeRef = useRef<number>();
+  const [isCommentSheetOpen, setIsCommentSheetOpen] = useState(false);
 
   const currentUserStory = stories[currentIndex];
+
+  const bind = useDrag(({ down, movement: [, my], direction: [, dy], velocity: [, vy] }) => {
+    if (!down && dy < -0.5 && vy > 0.5) {
+      setIsCommentSheetOpen(true);
+    }
+  });
 
   useEffect(() => {
     const animate = (time: number) => {
@@ -90,7 +98,7 @@ export function StoryViewer({ stories, initialStoryIndex, onClose }: StoryViewer
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex items-center justify-center" onContextMenu={(e) => e.preventDefault()}>
-      <div className="relative w-full h-full max-w-md max-h-[95vh] sm:max-h-[80vh] aspect-[9/16] bg-muted rounded-lg overflow-hidden flex flex-col">
+      <div {...bind()} className="relative w-full h-full max-w-md max-h-[95vh] sm:max-h-[80vh] aspect-[9/16] bg-muted rounded-lg overflow-hidden flex flex-col">
         {/* Progress Bars */}
         <div className="absolute top-2 left-2 right-2 z-20 grid grid-cols-1 gap-1">
             <Progress value={progress} className="h-1 bg-white/30" />
@@ -141,6 +149,18 @@ export function StoryViewer({ stories, initialStoryIndex, onClose }: StoryViewer
                 </button>
              </div>
         )}
+        <div className="absolute bottom-4 right-4 z-20">
+            <CommentSheet
+                open={isCommentSheetOpen}
+                onOpenChange={setIsCommentSheetOpen}
+                commentCount={currentUserStory.comments.length}
+                videoOwnerId={currentUserStory.user.id}
+            >
+                <Button variant="ghost" size="icon" className="text-white hover:bg-black/50" onClick={() => setIsCommentSheetOpen(true)}>
+                    <MessageCircle />
+                </Button>
+            </CommentSheet>
+        </div>
       </div>
     </div>
   );
